@@ -1,3 +1,7 @@
+external_components:
+  # shorthand
+  source: github://aronsky/esphome-components
+
 light:
   - platform: lampsmart_pro_light
     name: Kitchen Light
