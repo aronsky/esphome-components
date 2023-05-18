@@ -1,4 +1,4 @@
-# Lev's ESPHome
+# Lev's ESPHome Components
 Custom components for ESPHome
 
 ## LampSmart Pro
