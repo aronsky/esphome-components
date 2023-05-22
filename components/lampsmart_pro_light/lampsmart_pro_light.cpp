@@ -21,8 +21,8 @@ typedef union {
     uint8_t var2;
     uint16_t command;
     uint16_t _20;
-    uint8_t var3;
-    uint8_t var4;
+    uint8_t channel1;
+    uint8_t channel2;
     uint16_t _24;
     uint8_t _26;
     uint16_t rand;
@@ -145,8 +145,8 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       .var2 = 0x0,
       .command = cmd,
       ._20 = 0,
-      .var3 = cold, // Cold brightness
-      .var4 = warm, // Warm brightness
+      .channel1 = reversed_ ? warm : cold,
+      .channel2 = reversed_ ? cold : warm,
       ._24 = 0,
       ._26 = 0,
       .rand = seed,

@@ -7,6 +7,7 @@ from esphome.const import (
     CONF_OUTPUT_ID,
     CONF_COLD_WHITE_COLOR_TEMPERATURE,
     CONF_WARM_WHITE_COLOR_TEMPERATURE,
+    CONF_REVERSED,
 )
 
 AUTO_LOAD = ["esp32_ble"]
@@ -24,6 +25,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_COLD_WHITE_COLOR_TEMPERATURE): cv.color_temperature,
             cv.Optional(CONF_WARM_WHITE_COLOR_TEMPERATURE): cv.color_temperature,
             cv.Optional(CONF_CONSTANT_BRIGHTNESS, default=False): cv.boolean,
+            cv.Optional(CONF_REVERSED, default=False): cv.boolean,
         }
     ),
     cv.has_none_or_all_keys(
@@ -48,5 +50,6 @@ async def to_code(config):
         )
 
     cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
+    cg.add(var.set_reversed(config[CONF_REVERSED]))
     cg.add(var.set_tx_duration(config[CONF_DURATION]))
     cg.add(var.setup())
