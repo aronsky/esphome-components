@@ -117,12 +117,12 @@ void LampSmartProLight::write_state(light::LightState *state) {
   uint8_t wwi = (uint8_t)(0xff * wwf);
 
   if ((cwi < min_brightness_) && (wwi < min_brightness_)) {
-    if (cwf > wwf) {
+    if (cwf > 0.000001) {
       cwi = min_brightness_;
-    } else if (wwf > cwf) {
+    }
+    
+    if (wwf > 0.000001) {
       wwi = min_brightness_;
-    } else {
-      cwi = wwi = min_brightness_;
     }
   }
 
