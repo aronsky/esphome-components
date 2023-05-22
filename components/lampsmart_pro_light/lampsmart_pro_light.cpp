@@ -17,7 +17,7 @@ typedef union {
     uint8_t prefix[10];
     uint8_t packet_number;
     uint16_t type;
-    uint32_t var1;
+    uint32_t identifier;
     uint8_t var2;
     uint16_t command;
     uint16_t _20;
@@ -141,7 +141,7 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       .prefix = {0x02, 0x01, 0x02, 0x1B, 0x16, 0xF0, 0x08, 0x10, 0x80, 0x00},
       .packet_number = ++(this->tx_count_),
       .type = 0x100,
-      .var1 = 0xcafebabe,   // Probably an identifier used during pairing
+      .identifier = 0xcafebabe,   // Probably an identifier used during pairing
       .var2 = 0x0,
       .command = cmd,
       ._20 = 0,
