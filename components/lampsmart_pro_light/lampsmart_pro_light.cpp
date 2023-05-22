@@ -113,8 +113,18 @@ void LampSmartProLight::write_state(light::LightState *state) {
     return;
   }
 
-  uint8_t cwi = min_brightness_ + (uint8_t)((0xff - min_brightness_) * cwf);
-  uint8_t wwi = min_brightness_ + (uint8_t)((0xff - min_brightness_) * wwf);
+  uint8_t cwi = (uint8_t)(0xff * cwf);
+  uint8_t wwi = (uint8_t)(0xff * wwf);
+
+  if ((cwi < min_brightness_) && (wwi < min_brightness_)) {
+    if (cwf > wwf) {
+      cwi = min_brightness_;
+    } else if (wwf > cwf) {
+      wwi = min_brightness_;
+    } else {
+      cwi = wwi = min_brightness_;
+    }
+  }
 
   ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
