@@ -113,8 +113,8 @@ void LampSmartProLight::write_state(light::LightState *state) {
     return;
   }
 
-  uint8_t cwi = 0x1a + (uint8_t)(0xe5 * cwf);
-  uint8_t wwi = 0x1a + (uint8_t)(0xe5 * wwf);
+  uint8_t cwi = min_brightness_ + (uint8_t)((0xff - min_brightness_) * cwf);
+  uint8_t wwi = min_brightness_ + (uint8_t)((0xff - min_brightness_) * wwf);
 
   ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
