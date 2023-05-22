@@ -27,7 +27,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_WARM_WHITE_COLOR_TEMPERATURE): cv.color_temperature,
             cv.Optional(CONF_CONSTANT_BRIGHTNESS, default=False): cv.boolean,
             cv.Optional(CONF_REVERSED, default=False): cv.boolean,
-            cv.Optional(CONF_MIN_BRIGHTNESS, default=0x1a): cv.hex_uint8_t,
+            cv.Optional(CONF_MIN_BRIGHTNESS, default=0x7): cv.hex_uint8_t,
         }
     ),
     cv.has_none_or_all_keys(
