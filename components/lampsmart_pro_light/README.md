@@ -21,3 +21,9 @@ light:
     duration: 1000
     default_transition_length: 0s
 ```
+
+# Potentially fixable issues
+
+If this component works, but the cold and warm temperatures are reversed (that is, setting the temperature in Home Assistant to warm results in cold/blue light, and setting it to cold results in warm/yellow light), add a `reversed: true` line to your `lightsmart_pro_light` config.
+
+If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a number between 1 and 255).
