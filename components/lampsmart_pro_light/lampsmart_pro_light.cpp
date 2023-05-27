@@ -91,7 +91,6 @@ uint16_t v2_crc16_ccitt(uint8_t *src, uint8_t size, uint16_t crc16_result) {
 }
 
 void LampSmartProLight::setup() {
-  ESP_LOGD(TAG, "LampSmartProLight::setup called for %s!", get_object_id().c_str());
   register_service(&LampSmartProLight::on_pair, "pair");
 }
 
@@ -137,7 +136,12 @@ void LampSmartProLight::write_state(light::LightState *state) {
 }
 
 void LampSmartProLight::dump_config() {
-  ESP_LOGCONFIG(TAG, "LampSmartProLight");
+  ESP_LOGCONFIG(TAG, "LampSmartProLight '%s'", get_object_id().c_str());
+  ESP_LOGCONFIG(TAG, "  Cold White Temperature: %d mireds", cold_white_temperature_);
+  ESP_LOGCONFIG(TAG, "  Warm White Temperature: %d mireds", warm_white_temperature_);
+  ESP_LOGCONFIG(TAG, "  Constant Brightness: %s", constant_brightness_ ? "true" : "false");
+  ESP_LOGCONFIG(TAG, "  Minimum Brightness: %d", min_brightness_);
+  ESP_LOGCONFIG(TAG, "  Transition Duratoin: %d seconds", tx_duration_);
 }
 
 void LampSmartProLight::on_pair() {
