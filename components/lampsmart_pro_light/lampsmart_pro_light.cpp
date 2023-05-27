@@ -159,7 +159,7 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       .prefix = {0x02, 0x01, 0x02, 0x1B, 0x16, 0xF0, 0x08, 0x10, 0x80, 0x00},
       .packet_number = ++(this->tx_count_),
       .type = 0x100,
-      .identifier = 0xcafebabe,   // Probably an identifier used during pairing
+      .identifier = light_state_ ? light_state_.get_object_id_hash() : 0xcafebabe,
       .var2 = 0x0,
       .command = cmd,
       ._20 = 0,
