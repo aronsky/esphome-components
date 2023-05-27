@@ -91,6 +91,7 @@ uint16_t v2_crc16_ccitt(uint8_t *src, uint8_t size, uint16_t crc16_result) {
 }
 
 void LampSmartProLight::setup() {
+  ESP_LOGD(TAG, "LampSmartProLight::setup called for %s!", get_object_id().c_str());
   register_service(&LampSmartProLight::on_pair, "pair");
 }
 
