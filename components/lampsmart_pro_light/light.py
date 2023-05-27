@@ -15,7 +15,7 @@ AUTO_LOAD = ["esp32_ble"]
 DEPENDENCIES = ["esp32"]
 
 lampsmartpro_ns = cg.esphome_ns.namespace('lampsmartpro')
-LampSmartProLight = lampsmartpro_ns.class_('LampSmartProLight', light.LightOutput)
+LampSmartProLight = lampsmartpro_ns.class_('LampSmartProLight', cg.Component, light.LightOutput)
 
 
 CONFIG_SCHEMA = cv.All(
@@ -39,6 +39,7 @@ CONFIG_SCHEMA = cv.All(
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_OUTPUT_ID])
+    await cg.register_component(var, config)
     await light.register_light(var, config)
 
     if CONF_COLD_WHITE_COLOR_TEMPERATURE in config:
@@ -55,4 +56,3 @@ async def to_code(config):
     cg.add(var.set_reversed(config[CONF_REVERSED]))
     cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS]))
     cg.add(var.set_tx_duration(config[CONF_DURATION]))
-    cg.add(var.setup())

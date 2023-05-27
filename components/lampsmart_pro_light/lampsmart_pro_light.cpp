@@ -136,7 +136,12 @@ void LampSmartProLight::write_state(light::LightState *state) {
 }
 
 void LampSmartProLight::dump_config() {
-  ESP_LOGCONFIG(TAG, "LampSmartProLight");
+  ESP_LOGCONFIG(TAG, "LampSmartProLight '%s'", light_state_ ? light_state_->get_name().c_str() : "");
+  ESP_LOGCONFIG(TAG, "  Cold White Temperature: %f mireds", cold_white_temperature_);
+  ESP_LOGCONFIG(TAG, "  Warm White Temperature: %f mireds", warm_white_temperature_);
+  ESP_LOGCONFIG(TAG, "  Constant Brightness: %s", constant_brightness_ ? "true" : "false");
+  ESP_LOGCONFIG(TAG, "  Minimum Brightness: %d", min_brightness_);
+  ESP_LOGCONFIG(TAG, "  Transmission Duratoin: %d millis", tx_duration_);
 }
 
 void LampSmartProLight::on_pair() {
