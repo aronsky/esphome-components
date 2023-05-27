@@ -92,6 +92,7 @@ uint16_t v2_crc16_ccitt(uint8_t *src, uint8_t size, uint16_t crc16_result) {
 
 void LampSmartProLight::setup() {
   register_service(&LampSmartProLight::on_pair, "pair");
+  register_service(&LampSmartProLight::on_unpair, "unpair");
 }
 
 light::LightTraits LampSmartProLight::get_traits() {
@@ -107,7 +108,7 @@ void LampSmartProLight::write_state(light::LightState *state) {
   state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
 
   if (!cwf && !wwf) {
-    send_packet(0x11, 0, 0);
+    send_packet(CMD_TURN_OFF, 0, 0);
     _is_off = true;
 
     return;
@@ -129,10 +130,11 @@ void LampSmartProLight::write_state(light::LightState *state) {
   ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
   if (_is_off) {
-    send_packet(0x10, 0, 0);
+    send_packet(CMD_TURN_ON, 0, 0);
     _is_off = false;
   }
-  send_packet(0x21, cwi, wwi);
+
+  send_packet(CMD_DIM, cwi, wwi);
 }
 
 void LampSmartProLight::dump_config() {
@@ -146,7 +148,12 @@ void LampSmartProLight::dump_config() {
 
 void LampSmartProLight::on_pair() {
   ESP_LOGD(TAG, "LampSmartProLight::on_pair called!");
-  send_packet(0x28, 0, 0);
+  send_packet(CMD_PAIR, 0, 0);
+}
+
+void LampSmartProLight::on_unpair() {
+  ESP_LOGD(TAG, "LampSmartProLight::on_unpair called!");
+  send_packet(CMD_UNPAIR, 0, 0);
 }
 
 void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
