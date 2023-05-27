@@ -6,7 +6,7 @@
 
 #define CMD_PAIR (0x28)
 #define CMD_UNPAIR (0x45)
-#define CMD_TURN_OFF (0x10)
+#define CMD_TURN_ON (0x10)
 #define CMD_TURN_OFF (0x11)
 #define CMD_DIM (0x21)
 
