@@ -15,7 +15,7 @@ AUTO_LOAD = ["esp32_ble"]
 DEPENDENCIES = ["esp32"]
 
 lampsmartpro_ns = cg.esphome_ns.namespace('lampsmartpro')
-LampSmartProLight = lampsmartpro_ns.class_('LampSmartProLight', light.LightOutput)
+LampSmartProLight = lampsmartpro_ns.class_('LampSmartProLight', cg.Component, light.LightOutput)
 
 
 CONFIG_SCHEMA = cv.All(

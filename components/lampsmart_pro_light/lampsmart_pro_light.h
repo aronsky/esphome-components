@@ -7,7 +7,7 @@
 namespace esphome {
 namespace lampsmartpro {
 
-class LampSmartProLight : public light::LightOutput, public Component, public EntityBase, public api::CustomAPIDevice {
+class LampSmartProLight : public light::LightOutput, public Component, public api::CustomAPIDevice {
  public:
   void setup() override;
   void dump_config() override;
