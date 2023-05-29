@@ -45,10 +45,6 @@ static esp_ble_adv_params_t ADVERTISING_PARAMS = {
   .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
 
-static uint8_t BRIGHTNESS_LEVELS[10] = {
-  0x1A, 0x33, 0x4C, 0x66, 0x7F, 0x99, 0xB2, 0xCC, 0xE5, 0xFF
-};
-
 static uint8_t XBOXES[128] = {
   0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC,
   0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15,
@@ -91,7 +87,8 @@ uint16_t v2_crc16_ccitt(uint8_t *src, uint8_t size, uint16_t crc16_result) {
 }
 
 void LampSmartProLight::setup() {
-  register_service(&LampSmartProLight::on_pair, "pair");
+  register_service(&LampSmartProLight::on_pair, light_state_ ? "pair_" + light_state_->get_object_id() : "pair");
+  register_service(&LampSmartProLight::on_unpair, light_state_ ? "unpair_" + light_state_->get_object_id() : "unpair");
 }
 
 light::LightTraits LampSmartProLight::get_traits() {
@@ -107,7 +104,7 @@ void LampSmartProLight::write_state(light::LightState *state) {
   state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
 
   if (!cwf && !wwf) {
-    send_packet(0x11, 0, 0);
+    send_packet(CMD_TURN_OFF, 0, 0);
     _is_off = true;
 
     return;
@@ -129,10 +126,11 @@ void LampSmartProLight::write_state(light::LightState *state) {
   ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
   if (_is_off) {
-    send_packet(0x10, 0, 0);
+    send_packet(CMD_TURN_ON, 0, 0);
     _is_off = false;
   }
-  send_packet(0x21, cwi, wwi);
+
+  send_packet(CMD_DIM, cwi, wwi);
 }
 
 void LampSmartProLight::dump_config() {
@@ -146,7 +144,12 @@ void LampSmartProLight::dump_config() {
 
 void LampSmartProLight::on_pair() {
   ESP_LOGD(TAG, "LampSmartProLight::on_pair called!");
-  send_packet(0x28, 0, 0);
+  send_packet(CMD_PAIR, 0, 0);
+}
+
+void LampSmartProLight::on_unpair() {
+  ESP_LOGD(TAG, "LampSmartProLight::on_unpair called!");
+  send_packet(CMD_UNPAIR, 0, 0);
 }
 
 void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
@@ -156,7 +159,7 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       .prefix = {0x02, 0x01, 0x02, 0x1B, 0x16, 0xF0, 0x08, 0x10, 0x80, 0x00},
       .packet_number = ++(this->tx_count_),
       .type = 0x100,
-      .identifier = 0xcafebabe,   // Probably an identifier used during pairing
+      .identifier = light_state_ ? light_state_->get_object_id_hash() : 0xcafebabe,
       .var2 = 0x0,
       .command = cmd,
       ._20 = 0,
