@@ -39,7 +39,7 @@ class LampSmartProLight : public light::LightOutput, public Component, public En
   bool reversed_;
   uint8_t min_brightness_;
   bool _is_off;
-  uint8_t tx_count_;
+  uint16_t tx_count_;
   uint32_t tx_duration_;
   light::LightState *light_state_;
 };
