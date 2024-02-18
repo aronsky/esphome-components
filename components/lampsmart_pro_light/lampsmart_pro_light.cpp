@@ -87,8 +87,10 @@ uint16_t v2_crc16_ccitt(uint8_t *src, uint8_t size, uint16_t crc16_result) {
 }
 
 void LampSmartProLight::setup() {
+#ifdef USE_API
   register_service(&LampSmartProLight::on_pair, light_state_ ? "pair_" + light_state_->get_object_id() : "pair");
   register_service(&LampSmartProLight::on_unpair, light_state_ ? "unpair_" + light_state_->get_object_id() : "unpair");
+#endif
 }
 
 light::LightTraits LampSmartProLight::get_traits() {
