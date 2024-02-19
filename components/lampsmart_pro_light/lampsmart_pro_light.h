@@ -1,7 +1,9 @@
 #pragma once
 
 #include "esphome.h"
+#ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
+#endif
 #include "esphome/components/light/light_output.h"
 
 #define CMD_PAIR (0x28)
@@ -13,7 +15,11 @@
 namespace esphome {
 namespace lampsmartpro {
 
-class LampSmartProLight : public light::LightOutput, public Component, public EntityBase, public api::CustomAPIDevice {
+class LampSmartProLight : public light::LightOutput, public Component, public EntityBase
+#ifdef USE_API
+  , public api::CustomAPIDevice
+#endif
+{
  public:
   void setup() override;
   void dump_config() override;
@@ -27,10 +33,10 @@ class LampSmartProLight : public light::LightOutput, public Component, public En
   void setup_state(light::LightState *state) override { this->light_state_ = state; }
   void write_state(light::LightState *state) override;
   light::LightTraits get_traits() override;
-
- protected:
   void on_pair();
   void on_unpair();
+
+ protected:
   void send_packet(uint16_t cmd, uint8_t cold, uint8_t warm);
 
   float cold_white_temperature_{167};
@@ -42,6 +48,30 @@ class LampSmartProLight : public light::LightOutput, public Component, public En
   uint8_t tx_count_;
   uint32_t tx_duration_;
   light::LightState *light_state_;
+};
+
+template<typename... Ts> class PairAction : public Action<Ts...> {
+ public:
+  explicit PairAction(esphome::light::LightState *state) : state_(state) {}
+
+  void play(Ts... x) override {
+    ((LampSmartProLight *)this->state_->get_output())->on_pair();
+  }
+
+ protected:
+  esphome::light::LightState *state_;
+};
+
+template<typename... Ts> class UnpairAction : public Action<Ts...> {
+ public:
+  explicit UnpairAction(esphome::light::LightState *state) : state_(state) {}
+
+  void play(Ts... x) override {
+    ((LampSmartProLight *)this->state_->get_output())->on_unpair();
+  }
+
+ protected:
+  esphome::light::LightState *state_;
 };
 
 } //namespace lampsmartpro
