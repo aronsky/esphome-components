@@ -1,12 +1,11 @@
 #include "lampsmart_pro_light.h"
 #include "esphome/core/log.h"
 
-#include "aes.h"
-
 #ifdef USE_ESP32
 
 #include <esp_gap_ble_api.h>
 #include <esp_gatts_api.h>
+#include <mbedtls/aes.h>
 
 namespace esphome {
 namespace lampsmartpro {
@@ -164,12 +163,14 @@ void sign_packet_v3(adv_data_t* packet) {
   sigkey[0] = seed & 0xff;
   sigkey[1] = (seed >> 8) & 0xff;
   sigkey[2] = tx_count;
-  struct AES_ctx aes_ctx;
-  AES_init_ctx(&aes_ctx, sigkey);
-  uint8_t aes_buf[16];
-  memcpy(aes_buf, &(packet->raw[8]), 16);  
-  AES_ECB_encrypt(&aes_ctx, aes_buf);
-  packet->signature_v3 = ((uint16_t*) aes_buf)[0]; 
+  mbedtls_aes_context aes_ctx;
+  mbedtls_aes_init(&aes_ctx);
+  mbedtls_aes_setkey_enc(&aes_ctx, sigkey, sizeof(sigkey)*8);
+  uint8_t aes_in[16], aes_out[16];
+  memcpy(aes_in, &(packet->raw[8]), 16);
+  mbedtls_aes_crypt_ecb(&aes_ctx, ESP_AES_ENCRYPT, aes_in, aes_out);
+  mbedtls_aes_free(&aes_ctx);
+  packet->signature_v3 = ((uint16_t*) aes_out)[0]; 
   if (packet->signature_v3 == 0) {
       packet->signature_v3 = 0xffff;
   }
