@@ -156,6 +156,25 @@ void LampSmartProLight::on_unpair() {
   send_packet(CMD_UNPAIR, 0, 0);
 }
 
+void sign_packet_v3(adv_data_t* packet) {
+  uint16_t seed = packet->rand;
+  uint8_t sigkey[16] = {0, 0, 0, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16};
+  uint8_t tx_count = (uint8_t) packet->packet_number;
+
+  sigkey[0] = seed & 0xff;
+  sigkey[1] = (seed >> 8) & 0xff;
+  sigkey[2] = tx_count;
+  struct AES_ctx aes_ctx;
+  AES_init_ctx(&aes_ctx, sigkey);
+  uint8_t aes_buf[16];
+  memcpy(aes_buf, &(packet->raw[8]), 16);  
+  AES_ECB_encrypt(&aes_ctx, aes_buf);
+  packet->signature_v3 = ((uint16_t*) aes_buf)[0]; 
+  if (packet->signature_v3 == 0) {
+      packet->signature_v3 = 0xffff;
+  }
+}
+
 void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
   uint16_t seed = (uint16_t) rand();
 
@@ -174,20 +193,7 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       .rand = seed,
   }};
 
-  uint8_t sigkey[16] = {0, 0, 0, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16};
-  sigkey[0] = seed & 0xff;
-  sigkey[1] = (seed >> 8) & 0xff;
-  sigkey[2] = this->tx_count_;
-  struct AES_ctx aes_ctx;
-  AES_init_ctx(&aes_ctx, sigkey);
-  uint8_t aes_buf[16];
-  memcpy(aes_buf, &packet.raw[8], 16);  
-  AES_ECB_encrypt(&aes_ctx, aes_buf);
-  packet.signature_v3 = ((uint16_t*) aes_buf)[0]; 
-  if (packet.signature_v3 == 0) {
-      packet.signature_v3 = 0xffff;
-  }
-  
+  sign_packet_v3(&packet);
   ble_whiten(&packet.raw[9], 0x12, (uint8_t) seed, 0);
   packet.crc16 = v2_crc16_ccitt(&packet.raw[7], 0x16, ~seed);
   
