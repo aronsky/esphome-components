@@ -119,7 +119,7 @@ void LampSmartProLight::write_state(light::LightState *state) {
   send_packet(CMD_DIM, cwi, wwi);
 }
 
-void LampSmartProLight::send_packet(uint16_t cmd, uint8_t *args) {
+void LampSmartProLight::send_packet(uint8_t cmd, uint8_t *args) {
   uint16_t seed = (uint16_t) rand();
 
   adv_data_t packet = {{
