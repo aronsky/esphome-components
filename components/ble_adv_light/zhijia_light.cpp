@@ -64,7 +64,7 @@ void ZhiJiaLight::write_state(light::LightState *state) {
 }
 
 void ZhiJiaLight::send_packet(uint8_t cmd, uint8_t *val) {
-  unsigned char args[] = {val[0], 0, 0};
+  unsigned char args[] = {val ? val[0] : 0, 0, 0};
   unsigned char mfg_data[0x1a] = {0};
   char mfg_data_dump[3 * sizeof(mfg_data) + 1] = {0};
   esp_ble_adv_data_t adv_data = {
