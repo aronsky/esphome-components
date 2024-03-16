@@ -35,41 +35,6 @@ static esp_ble_adv_params_t ADVERTISING_PARAMS = {
   .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
 
-void ZhiJiaLight::write_state(light::LightState *state) {
-  float cwf, wwf;
-  state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
-
-  if (!cwf && !wwf) {
-    send_packet(CMD_TURN_OFF());
-    _is_off = true;
-
-    return;
-  }
-
-  uint8_t cwi = (uint8_t)(0xff * cwf);
-  uint8_t wwi = (uint8_t)(0xff * wwf);
-
-  if ((cwi < min_brightness_) && (wwi < min_brightness_)) {
-    if (cwf > 0.000001) {
-      cwi = min_brightness_;
-    }
-    
-    if (wwf > 0.000001) {
-      wwi = min_brightness_;
-    }
-  }
-
-  ESP_LOGD(TAG, "ZhiJiaLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
-
-  if (_is_off) {
-    send_packet(CMD_TURN_ON());
-    _is_off = false;
-  }
-
-  send_packet(CMD_CCT(), 255 * ((float) wwi / (cwi + wwi)));
-  send_packet(CMD_DIM(), cwi + wwi > 255 ? 255 : cwi + wwi);
-}
-
 void ZhiJiaLight::send_packet(uint8_t cmd, uint8_t *val) {
   unsigned char args[] = {0, 0, 0};
   unsigned char mfg_data[0x1a] = {0};

@@ -62,7 +62,7 @@ void BleAdvLight::write_state(light::LightState *state) {
     }
   }
 
-  ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
+  ESP_LOGD(TAG, "BleAdvLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
   if (_is_off) {
     send_packet(CMD_TURN_ON(), 0, 0);
