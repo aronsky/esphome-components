@@ -4,6 +4,7 @@
 
 * Only tested with Marpou Ceiling CCT light, and a certain aftermarket LED driver (definitely doesn't support RGB lights currently, but that could be added in the future).
 * All lights are controlled at the same time (does not support controlling different lamps individually - need help with ESPHome internals to figure this one out).
+* ZhiJia based lights pairing functionality hasn't been tested - if controlling a light that's been paired using the ZhiJia app doesn't work, please let me know. Unpairing will definitely not work (not supported in the app).
 
 ## How to try it
 
