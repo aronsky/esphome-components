@@ -90,7 +90,7 @@ void LampSmartProLight::write_state(light::LightState *state) {
   state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
 
   if (!cwf && !wwf) {
-    send_packet(CMD_TURN_OFF, 0, 0);
+    send_packet(CMD_TURN_OFF(), 0, 0);
     _is_off = true;
 
     return;
@@ -112,11 +112,11 @@ void LampSmartProLight::write_state(light::LightState *state) {
   ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
   if (_is_off) {
-    send_packet(CMD_TURN_ON, 0, 0);
+    send_packet(CMD_TURN_ON(), 0, 0);
     _is_off = false;
   }
 
-  send_packet(CMD_DIM, cwi, wwi);
+  send_packet(CMD_DIM(), cwi, wwi);
 }
 
 void LampSmartProLight::send_packet(uint8_t cmd, uint8_t *args) {

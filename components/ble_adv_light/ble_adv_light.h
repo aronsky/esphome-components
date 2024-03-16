@@ -7,13 +7,6 @@
 #endif
 #include "esphome/components/light/light_output.h"
 
-#define CMD_PAIR (0xA2)
-#define CMD_UNPAIR (0x45)
-#define CMD_TURN_ON (0xA5)
-#define CMD_TURN_OFF (0xA6)
-#define CMD_DIM (0xAD)
-#define CMD_CCT (0xAE)
-
 namespace esphome {
 namespace bleadvlight {
 
@@ -39,7 +32,15 @@ class BleAdvLight : public light::LightOutput, public Component, public EntityBa
   void on_unpair();
 
  protected:
+  virtual void update_channels(uint8_t cold, uint8_t warm) = 0;
   virtual void send_packet(uint8_t cmd, uint8_t *args = NULL) = 0;
+
+  virtual uint8_t CMD_PAIR() = 0;
+  virtual uint8_t CMD_UNPAIR() = 0;
+  virtual uint8_t CMD_TURN_ON() = 0;
+  virtual uint8_t CMD_TURN_OFF() = 0;
+  virtual uint8_t CMD_DIM() = 0;
+  virtual uint8_t CMD_CCT() = 0;
 
   float cold_white_temperature_{167};
   float warm_white_temperature_{333};
@@ -60,6 +61,13 @@ class ZhiJiaLight : public BleAdvLight
  protected:
   void send_packet(uint8_t cmd, uint8_t *args) override;
 
+  uint8_t CMD_PAIR() override { return 0xA2; };
+  uint8_t CMD_UNPAIR() override { return 0x45; };
+  uint8_t CMD_TURN_ON() override { return 0xA5; };
+  uint8_t CMD_TURN_OFF() override { return 0xA6; };
+  uint8_t CMD_DIM() override { return 0xAD; };
+  uint8_t CMD_CCT() override { return 0xAE; };
+
  private:
   void send_packet(uint8_t cmd, uint8_t val = 0) { send_packet(cmd, {val}); };
 };
@@ -71,6 +79,13 @@ class LampSmartProLight : public BleAdvLight
 
  protected:
   void send_packet(uint8_t cmd, uint8_t *args) override;
+
+  uint8_t CMD_PAIR() override { return 0x28; };
+  uint8_t CMD_UNPAIR() override { return 0x45; };
+  uint8_t CMD_TURN_ON() override { return 0x10; };
+  uint8_t CMD_TURN_OFF() override { return 0x11; };
+  uint8_t CMD_DIM() override { return 0x21; };
+  uint8_t CMD_CCT() override { return 0; };
 
  private:
   void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) {

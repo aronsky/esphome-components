@@ -40,12 +40,12 @@ void BleAdvLight::dump_config() {
 
 void BleAdvLight::on_pair() {
   ESP_LOGD(TAG, "BleAdvLight::on_pair called!");
-  send_packet(CMD_PAIR);
+  send_packet(CMD_PAIR());
 }
 
 void BleAdvLight::on_unpair() {
   ESP_LOGD(TAG, "BleAdvLight::on_unpair called!");
-  send_packet(CMD_UNPAIR);
+  send_packet(CMD_UNPAIR());
 }
 
 } // namespace bleadvlight

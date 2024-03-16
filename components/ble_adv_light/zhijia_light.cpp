@@ -1,6 +1,13 @@
 #include "ble_adv_light.h"
 #include "msc26a.h"
 
+// #define CMD_PAIR (0xA2)
+// #define CMD_UNPAIR (0x45)
+// #define CMD_TURN_ON (0xA5)
+// #define CMD_TURN_OFF (0xA6)
+// #define CMD_DIM (0xAD)
+// #define CMD_CCT (0xAE)
+
 #ifdef USE_ESP32
 
 #include <esp_gap_ble_api.h>
@@ -33,7 +40,7 @@ void ZhiJiaLight::write_state(light::LightState *state) {
   state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
 
   if (!cwf && !wwf) {
-    send_packet(CMD_TURN_OFF);
+    send_packet(CMD_TURN_OFF());
     _is_off = true;
 
     return;
@@ -55,12 +62,12 @@ void ZhiJiaLight::write_state(light::LightState *state) {
   ESP_LOGD(TAG, "ZhiJiaLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
 
   if (_is_off) {
-    send_packet(CMD_TURN_ON);
+    send_packet(CMD_TURN_ON());
     _is_off = false;
   }
 
-  send_packet(CMD_CCT, 255 * ((float) wwi / (cwi + wwi)));
-  send_packet(CMD_DIM, cwi + wwi > 255 ? 255 : cwi + wwi);
+  send_packet(CMD_CCT(), 255 * ((float) wwi / (cwi + wwi)));
+  send_packet(CMD_DIM(), cwi + wwi > 255 ? 255 : cwi + wwi);
 }
 
 void ZhiJiaLight::send_packet(uint8_t cmd, uint8_t *val) {
