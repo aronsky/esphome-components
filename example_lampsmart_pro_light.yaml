@@ -3,7 +3,8 @@ external_components:
   source: github://aronsky/esphome-components
 
 light:
-  - platform: lampsmart_pro_light
+  - platform: ble_adv_light
+    type: zhijia
     name: Kitchen Light
-    duration: 1000
+    duration: 750
     default_transition_length: 0s
