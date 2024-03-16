@@ -60,6 +60,15 @@ class ZhiJiaLight : public BleAdvLight
   void send_packet(uint8_t cmd, uint8_t val = 0) override;
 };
 
+class LampSmartProLight : public BleAdvLight
+{
+ public:
+  void write_state(light::LightState *state) override;
+
+ protected:
+  void send_packet(uint8_t cmd, uint8_t val = 0) override;
+};
+
 template<typename... Ts> class PairAction : public Action<Ts...> {
  public:
   explicit PairAction(esphome::light::LightState *state) : state_(state) {}
