@@ -26,7 +26,7 @@ class BleAdvLight : public light::LightOutput, public Component, public EntityBa
   void set_min_brightness(uint8_t min_brightness) { min_brightness_ = min_brightness; }
   void set_tx_duration(uint32_t tx_duration) { tx_duration_ = tx_duration; }
   void setup_state(light::LightState *state) override { this->light_state_ = state; }
-  void write_state(light::LightState *state) override = 0;
+  void write_state(light::LightState *state) override;
   light::LightTraits get_traits() override;
   void on_pair();
   void on_unpair();
@@ -55,9 +55,6 @@ class BleAdvLight : public light::LightOutput, public Component, public EntityBa
 
 class ZhiJiaLight : public BleAdvLight
 {
- public:
-  void write_state(light::LightState *state) override;
-
  protected:
   void send_packet(uint8_t cmd, uint8_t *args) override;
 
@@ -68,15 +65,17 @@ class ZhiJiaLight : public BleAdvLight
   uint8_t CMD_DIM() override { return 0xAD; };
   uint8_t CMD_CCT() override { return 0xAE; };
 
+  void update_channels(uint8_t cold, uint8_t warm) override {
+    send_packet(CMD_CCT(), 255 * ((float) warm / (cold + warm)));
+    send_packet(CMD_DIM(), cold + warm > 255 ? 255 : cold + warm);
+  };
+
  private:
   void send_packet(uint8_t cmd, uint8_t val = 0) { send_packet(cmd, {val}); };
 };
 
 class LampSmartProLight : public BleAdvLight
 {
- public:
-  void write_state(light::LightState *state) override;
-
  protected:
   void send_packet(uint8_t cmd, uint8_t *args) override;
 
@@ -86,6 +85,10 @@ class LampSmartProLight : public BleAdvLight
   uint8_t CMD_TURN_OFF() override { return 0x11; };
   uint8_t CMD_DIM() override { return 0x21; };
   uint8_t CMD_CCT() override { return 0; };
+
+  void update_channels(uint8_t cold, uint8_t warm) override {
+    send_packet(CMD_DIM(), cold, warm);
+  };
 
  private:
   void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) {

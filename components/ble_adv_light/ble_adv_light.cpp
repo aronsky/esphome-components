@@ -38,6 +38,40 @@ void BleAdvLight::dump_config() {
   ESP_LOGCONFIG(TAG, "  Transmission Duratoin: %d millis", tx_duration_);
 }
 
+void BleAdvLight::write_state(light::LightState *state) {
+  float cwf, wwf;
+  state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
+
+  if (!cwf && !wwf) {
+    send_packet(CMD_TURN_OFF(), 0, 0);
+    _is_off = true;
+
+    return;
+  }
+
+  uint8_t cwi = (uint8_t)(0xff * cwf);
+  uint8_t wwi = (uint8_t)(0xff * wwf);
+
+  if ((cwi < min_brightness_) && (wwi < min_brightness_)) {
+    if (cwf > 0.000001) {
+      cwi = min_brightness_;
+    }
+    
+    if (wwf > 0.000001) {
+      wwi = min_brightness_;
+    }
+  }
+
+  ESP_LOGD(TAG, "LampSmartProLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
+
+  if (_is_off) {
+    send_packet(CMD_TURN_ON(), 0, 0);
+    _is_off = false;
+  }
+
+  update_channels(cwi, wwi);
+}
+
 void BleAdvLight::on_pair() {
   ESP_LOGD(TAG, "BleAdvLight::on_pair called!");
   send_packet(CMD_PAIR());
