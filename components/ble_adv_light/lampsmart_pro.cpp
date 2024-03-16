@@ -130,12 +130,17 @@ void LampSmartProLight::send_packet(uint8_t cmd, uint8_t *args) {
       .var2 = 0x0,
       .command = cmd,
       ._20 = 0,
-      .channel1 = args ? (reversed_ ? args[1] : args[0]) : 0,
-      .channel2 = args ? (reversed_ ? args[0] : args[1]) : 0,
+      .channel1 = 0,
+      .channel2 = 0,
       ._24 = 0,
       ._26 = 0,
       .rand = seed,
   }};
+
+  if (args) {
+    packet.channel1 = reversed_ ? args[1] : args[0];
+    packet.channel2 = reversed_ ? args[0] : args[1];
+  }
 
   ble_whiten(&packet.raw[9], 0x12, (uint8_t) seed, 0);
   packet.crc16 = v2_crc16_ccitt(&packet.raw[7], 0x16, ~seed);
