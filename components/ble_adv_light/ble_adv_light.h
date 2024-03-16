@@ -73,7 +73,10 @@ class LampSmartProLight : public BleAdvLight
   void send_packet(uint8_t cmd, uint8_t *args) override;
 
  private:
-  void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) { send_packet(cmd, {cold, warm}); };
+  void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) {
+    uint8_t args[2] = {cold, warm};
+    send_packet(cmd, args);
+  };
 };
 
 template<typename... Ts> class PairAction : public Action<Ts...> {
