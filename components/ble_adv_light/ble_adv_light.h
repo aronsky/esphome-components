@@ -66,8 +66,6 @@ class ZhiJiaLight : public BleAdvLight
   uint8_t CMD_CCT() override { return 0xAE; };
 
   void update_channels(uint8_t cold, uint8_t warm) override {
-    ESP_LOGD("zhijia", "ZhiJiaLight::update_channels called (cold: %d, warm: %d)!", cold, warm);
-    ESP_LOGD("zhijia", "Calling send_packet(0x%02x, %d)", CMD_CCT(), (uint8_t) (255 * ((float) warm / (cold + warm))));
     uint8_t cct_args[1] = {(uint8_t) (255 * ((float) warm / (cold + warm)))};
     uint8_t dim_args[1] = {(uint8_t) (cold + warm > 255 ? 255 : cold + warm)};
     send_packet(CMD_CCT(), cct_args);
@@ -88,13 +86,8 @@ class LampSmartProLight : public BleAdvLight
   uint8_t CMD_CCT() override { return 0; };
 
   void update_channels(uint8_t cold, uint8_t warm) override {
-    send_packet(CMD_DIM(), cold, warm);
-  };
-
- private:
-  void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) {
     uint8_t args[2] = {cold, warm};
-    send_packet(cmd, args);
+    send_packet(CMD_DIM(), args);
   };
 };
 
