@@ -70,7 +70,7 @@ class LampSmartProLight : public BleAdvLight
   void write_state(light::LightState *state) override;
 
  protected:
-  void send_packet(uint8_t cmd, uint8_t *args) override;
+  void send_packet(uint8_t cmd, uint8_t *args = {0, 0}) override;
 
  private:
   void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) {
