@@ -39,7 +39,7 @@ class BleAdvLight : public light::LightOutput, public Component, public EntityBa
   void on_unpair();
 
  protected:
-  virtual void send_packet(uint8_t cmd, uint8_t val = 0) = 0;
+  virtual void send_packet(uint8_t cmd, uint8_t *args) = 0;
 
   float cold_white_temperature_{167};
   float warm_white_temperature_{333};
@@ -58,7 +58,10 @@ class ZhiJiaLight : public BleAdvLight
   void write_state(light::LightState *state) override;
 
  protected:
-  void send_packet(uint8_t cmd, uint8_t val = 0) override;
+  void send_packet(uint8_t cmd, uint8_t *args) override;
+
+ private:
+  void send_packet(uint8_t cmd, uint8_t val = 0) { send_packet(cmd, {val}); };
 };
 
 class LampSmartProLight : public BleAdvLight
@@ -67,7 +70,10 @@ class LampSmartProLight : public BleAdvLight
   void write_state(light::LightState *state) override;
 
  protected:
-  void send_packet(uint8_t cmd, uint8_t val = 0) override;
+  void send_packet(uint8_t cmd, uint8_t *args) override;
+
+ private:
+  void send_packet(uint8_t cmd, uint8_t cold, uint8_t warm) { send_packet(cmd, {cold, warm}); };
 };
 
 template<typename... Ts> class PairAction : public Action<Ts...> {

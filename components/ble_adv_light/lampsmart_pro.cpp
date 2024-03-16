@@ -119,7 +119,7 @@ void LampSmartProLight::write_state(light::LightState *state) {
   send_packet(CMD_DIM, cwi, wwi);
 }
 
-void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
+void LampSmartProLight::send_packet(uint16_t cmd, uint8_t *args) {
   uint16_t seed = (uint16_t) rand();
 
   adv_data_t packet = {{
@@ -130,8 +130,8 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       .var2 = 0x0,
       .command = cmd,
       ._20 = 0,
-      .channel1 = reversed_ ? warm : cold,
-      .channel2 = reversed_ ? cold : warm,
+      .channel1 = reversed_ ? args[1] : args[0],
+      .channel2 = reversed_ ? args[0] : args[1],
       ._24 = 0,
       ._26 = 0,
       .rand = seed,
