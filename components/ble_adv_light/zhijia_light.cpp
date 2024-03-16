@@ -1,6 +1,5 @@
 #include "ble_adv_light.h"
 #include "msc26a.h"
-#include "esphome/core/log.h"
 
 #ifdef USE_ESP32
 

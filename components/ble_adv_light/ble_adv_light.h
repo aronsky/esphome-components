@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esphome.h"
+#include "esphome/core/log.h"
 #ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
 #endif
