@@ -39,7 +39,7 @@ class BleAdvLight : public light::LightOutput, public Component, public EntityBa
   void on_unpair();
 
  protected:
-  virtual void send_packet(uint8_t cmd, uint8_t *args = {0, 0}) = 0;
+  virtual void send_packet(uint8_t cmd, uint8_t *args) = 0;
 
   float cold_white_temperature_{167};
   float warm_white_temperature_{333};
@@ -77,6 +77,8 @@ class LampSmartProLight : public BleAdvLight
     uint8_t args[2] = {cold, warm};
     send_packet(cmd, args);
   };
+
+  void send_packet(uint8_t cmd) { send_packet(cmd, 0, 0); }
 };
 
 template<typename... Ts> class PairAction : public Action<Ts...> {
