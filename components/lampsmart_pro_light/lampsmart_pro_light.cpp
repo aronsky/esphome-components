@@ -5,6 +5,7 @@
 
 #include <esp_gap_ble_api.h>
 #include <esp_gatts_api.h>
+#include <mbedtls/aes.h>
 
 namespace esphome {
 namespace lampsmartpro {
@@ -23,7 +24,7 @@ typedef union {
     uint16_t _20;
     uint8_t channel1;
     uint8_t channel2;
-    uint16_t _24;
+    uint16_t signature_v3;
     uint8_t _26;
     uint16_t rand;
     uint16_t crc16;
@@ -154,6 +155,27 @@ void LampSmartProLight::on_unpair() {
   send_packet(CMD_UNPAIR, 0, 0);
 }
 
+void sign_packet_v3(adv_data_t* packet) {
+  uint16_t seed = packet->rand;
+  uint8_t sigkey[16] = {0, 0, 0, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16};
+  uint8_t tx_count = (uint8_t) packet->packet_number;
+
+  sigkey[0] = seed & 0xff;
+  sigkey[1] = (seed >> 8) & 0xff;
+  sigkey[2] = tx_count;
+  mbedtls_aes_context aes_ctx;
+  mbedtls_aes_init(&aes_ctx);
+  mbedtls_aes_setkey_enc(&aes_ctx, sigkey, sizeof(sigkey)*8);
+  uint8_t aes_in[16], aes_out[16];
+  memcpy(aes_in, &(packet->raw[8]), 16);
+  mbedtls_aes_crypt_ecb(&aes_ctx, ESP_AES_ENCRYPT, aes_in, aes_out);
+  mbedtls_aes_free(&aes_ctx);
+  packet->signature_v3 = ((uint16_t*) aes_out)[0]; 
+  if (packet->signature_v3 == 0) {
+      packet->signature_v3 = 0xffff;
+  }
+}
+
 void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
   uint16_t seed = (uint16_t) rand();
 
@@ -167,11 +189,12 @@ void LampSmartProLight::send_packet(uint16_t cmd, uint8_t cold, uint8_t warm) {
       ._20 = 0,
       .channel1 = reversed_ ? warm : cold,
       .channel2 = reversed_ ? cold : warm,
-      ._24 = 0,
+      .signature_v3 = 0,
       ._26 = 0,
       .rand = seed,
   }};
 
+  sign_packet_v3(&packet);
   ble_whiten(&packet.raw[9], 0x12, (uint8_t) seed, 0);
   packet.crc16 = v2_crc16_ccitt(&packet.raw[7], 0x16, ~seed);
   
