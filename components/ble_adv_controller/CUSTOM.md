@@ -86,12 +86,11 @@ For info here are the "known" commands already extracted from code and their cor
 | light_dim    | 0xB5, arg1=0..3, arg2| 0xAD, arg0  | 0xAD, arg0  | N/A      | N/A               |
 | light_cct    | 0xB7, arg1=0..3, arg2| 0xAE, arg0  | 0xAE, arg0  | N/A      | N/A               |
 | light_wcolor | N/A         | N/A         | N/A         | 0x21, arg0 arg1   | 0x21, arg2, arg3  |
-| fan_on(3)    | N/A         | N/A         | 0xD2        | 0x31, arg0=0      | 0x31, arg2=0      |
-| fan_off(3)   | N/A         | N/A         | 0xD3        | 0x31, arg0=0      | 0x31, arg2=0      |
-| fan_speed(3) | N/A         | N/A         | 0xDB + 2*speed | 0x31, arg0=1..3   | 0x31, arg2=1..3   |
-| fan_on(6)    | N/A         | N/A         | 0xD2        | 0x32, arg0=0, arg1=6      | 0x31, arg2=0, arg1=0x20      |
-| fan_off(6)   | N/A         | N/A         | 0xD3        | 0x32, arg0=0, arg1=6      | 0x31, arg2=0, arg1=0x20      |
-| fan_speed(6) | N/A         | N/A         | 0xDB + speed| 0x32, arg0=1..6, arg1=6   | 0x31, arg2=1..6, arg1=0x20   |
+| fan_on       | N/A         | N/A         | 0xD2        | 0x31, arg0=0      | 0x31, arg2=0      |
+| fan_off      | N/A         | N/A         | 0xD3        | 0x31, arg0=0      | 0x31, arg2=0      |
+| fan_speed    | N/A         | N/A         | 0xDB + (2*)speed | N/A          | N/A               |
+| fan_onoff_speed(3)    | N/A         | N/A         | 0xD2        | 0x31, arg0=0..3     | 0x31, arg2=0..3 |
+| fan_onoff_speed(6)    | N/A         | N/A         | 0xD2        | 0x32, arg0=0..6, arg1=6 | 0x31, arg2=0..6, arg1=0x20      |
 | fan_dir      | N/A         | N/A         | N/A         | 0x15, arg0=0..1   | 0x15, arg1=0..1   |
 
 NOTE: the cmd code given are hexa codes, **you have to translate them into decimal for use in HA service**, use Windows Calculator in programmer mode.

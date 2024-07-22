@@ -27,7 +27,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_COLD_WHITE_COLOR_TEMPERATURE, default="167 mireds"): cv.color_temperature,
             cv.Optional(CONF_WARM_WHITE_COLOR_TEMPERATURE, default="333 mireds"): cv.color_temperature,
             cv.Optional(CONF_CONSTANT_BRIGHTNESS, default=False): cv.boolean,
-            cv.Optional(CONF_MIN_BRIGHTNESS, default=0x07): cv.hex_uint8_t,
+            cv.Optional(CONF_MIN_BRIGHTNESS, default=0.21): cv.percentage,
             # override default value of default_transition_length to 0s as mostly not supported by those lights
             cv.Optional(CONF_DEFAULT_TRANSITION_LENGTH, default="0s"): cv.positive_time_period_milliseconds,
         }

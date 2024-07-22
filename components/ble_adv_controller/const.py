@@ -15,7 +15,8 @@ CONF_BLE_ADV_COMMANDS = {
   "fan_on" : {CONF_BLE_ADV_CMD: 30, CONF_BLE_ADV_NB_ARGS : 0},
   "fan_off" : {CONF_BLE_ADV_CMD: 31, CONF_BLE_ADV_NB_ARGS : 0},
   "fan_speed" : {CONF_BLE_ADV_CMD: 32, CONF_BLE_ADV_NB_ARGS : 1},
-  "fan_dir" : {CONF_BLE_ADV_CMD: 33, CONF_BLE_ADV_NB_ARGS : 1},
+  "fan_onoff_speed" : {CONF_BLE_ADV_CMD: 33, CONF_BLE_ADV_NB_ARGS : 2},
+  "fan_dir" : {CONF_BLE_ADV_CMD: 34, CONF_BLE_ADV_NB_ARGS : 1},
 }
 CONF_BLE_ADV_SPEED_COUNT = "speed_count"
 CONF_BLE_ADV_DIRECTION_SUPPORTED = "use_direction"

@@ -169,11 +169,7 @@ FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
         cmd_real.args_[1] = this->reversed_ ? cmd.args_[0] : cmd.args_[1];
       }
       break;
-    case CommandType::FAN_ON:
-    case CommandType::FAN_OFF:
-      cmd_real.cmd_ = 0x31;
-      break;
-    case CommandType::FAN_SPEED:
+    case CommandType::FAN_ONOFF_SPEED:
       if(isV2) {
         cmd_real.cmd_ = 0x31;
         cmd_real.args_[1] = (cmd.args_[1] == 6) ? 0x20 : 0; // specific flag for 6 level
@@ -220,8 +216,8 @@ void FanLampController::build_packet_v1(uint8_t* buf, Command &cmd) {
   }
   packet->crc16 = htons(v2_crc16_ccitt(buf + 8, 12, ~seed));
   
-  ESP_LOGD(TAG, "ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d,%d]", cmd.id_, cmd.tx_count_, 
-          cmd_real.cmd_, cmd_real.args_[0], cmd_real.args_[1], cmd_real.args_[2], cmd_real.args_[3]);
+  ESP_LOGD(TAG, "ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d]", cmd.id_, packet->tx_count, 
+          packet->command, packet->channel1, packet->channel2, packet->channel3);
 }
 
 void FanLampController::build_packet_v1a(uint8_t* buf, Command &cmd) {
@@ -274,8 +270,8 @@ void FanLampController::build_packet_v2(uint8_t * buf, Command &cmd, bool with_s
   packet->group_index = cmd.index_;
   packet->rand = seed;
 
-  ESP_LOGD(TAG, "ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d,%d]", cmd.id_, cmd.tx_count_, 
-          cmd_real.cmd_, cmd_real.args_[0], cmd_real.args_[1], cmd_real.args_[2], cmd_real.args_[3]);
+  ESP_LOGD(TAG, "ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d,%d]", cmd.id_, packet->packet_number, 
+          packet->command, packet->args[0], packet->args[1], packet->args[2], packet->args[3]);
 
   if (with_sign) {
     packet->sign = sign(buf + 3, packet->packet_number, seed);

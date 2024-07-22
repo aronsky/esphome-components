@@ -8,14 +8,13 @@ namespace bleadvcontroller {
 enum FanLampVariant : int {VARIANT_3, VARIANT_2, VARIANT_1A, VARIANT_1B};
 
 typedef struct {
-  uint8_t cmd_;
-  uint8_t args_[4];
+  uint8_t cmd_{0};
+  uint8_t args_[4]{0};
 } FanLampArgs;
 
 class FanLampController: public BleAdvController
 {
 public:
-  void set_reversed(bool reversed) { this->reversed_ = reversed; }
   virtual bool is_supported(const Command &cmd) override;
   virtual void get_adv_data(uint8_t * buf, Command &cmd) override;
 
@@ -27,8 +26,6 @@ protected:
   void build_packet_v1b(uint8_t* buf, Command &cmd);
   void build_packet_v1(uint8_t* buf, Command &cmd);
   void build_packet_v2(uint8_t* buf, Command &cmd, bool with_sign);
-
-  bool reversed_;
 };
 
 } //namespace bleadvcontroller

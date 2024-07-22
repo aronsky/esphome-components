@@ -70,6 +70,7 @@ CONFIG_SCHEMA = cv.All(
                 cv.Required(CONF_BLE_ADV_ENCODING): cv.one_of("zhijia"),
                 cv.Optional(CONF_VARIANT, default="v2"): cv.enum(CONTROLLER_ZHIJIA_VARIANTS, lower=True),
                 cv.Optional(CONF_DURATION, default=100): cv.positive_int,
+                cv.Optional(CONF_REVERSED, default=False): cv.boolean,
                 cv.Optional(CONF_BLE_ADV_FORCED_ID, default=0xC630B800): cv.hex_uint32_t,
             }
         ),
@@ -95,8 +96,7 @@ async def to_code(config):
     await setup_entity(var, config)
     cg.add(var.set_variant(config[CONF_VARIANT]))
     cg.add(var.set_tx_duration(config[CONF_DURATION]))
-    if CONF_REVERSED in config:
-        cg.add(var.set_reversed(config[CONF_REVERSED]))
+    cg.add(var.set_reversed(config[CONF_REVERSED]))
     cg.add(var.set_forced_id(config[CONF_BLE_ADV_FORCED_ID]))
 
 

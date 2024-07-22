@@ -68,7 +68,6 @@ bool BleAdvController::enqueue(Command &cmd) {
   cmd.id_ = this->forced_id_;
   this->get_adv_data(buffer, cmd);
 
-  ESP_LOGD(TAG, "Prepared packet: %s", esphome::format_hex_pretty(buffer, MAX_PACKET_LEN).c_str());
   this->commands_.push(buffer);
   return true;
 }
@@ -82,10 +81,11 @@ void BleAdvController::loop() {
       // Prevent other controllers to advertise
       IsBleAdvAdvertisingUsed = true;
       this->adv_start_time_ = now;
-      ESP_LOGD(TAG, "%s - start advertising at %d", this->get_object_id().c_str(), now);
       this->adv_data_.p_manufacturer_data = this->commands_.front();
       this->commands_.pop();
       this->adv_data_.manufacturer_len = MAX_PACKET_LEN;
+      ESP_LOGD(TAG, "%s - start advertising: %s", this->get_object_id().c_str(), 
+              esphome::format_hex_pretty(this->adv_data_.p_manufacturer_data, MAX_PACKET_LEN).c_str());
       ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_config_adv_data(&(this->adv_data_)));
       ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_start_advertising(&(this->adv_params_)));
     }
@@ -93,7 +93,7 @@ void BleAdvController::loop() {
   else {
     // command is being advertised by this controller, check if stop and clean-up needed
     if (now > this->adv_start_time_ + this->tx_duration_) {
-      ESP_LOGD(TAG, "%s - stop advertising at %d", this->get_object_id().c_str(), now);
+      ESP_LOGD(TAG, "%s - stop advertising", this->get_object_id().c_str());
       ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_stop_advertising());
       delete[] this->adv_data_.p_manufacturer_data;
       this->adv_data_.p_manufacturer_data = nullptr;

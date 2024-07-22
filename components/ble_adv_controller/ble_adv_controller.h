@@ -26,7 +26,8 @@ enum CommandType {
   FAN_ON = 30,
   FAN_OFF = 31,
   FAN_SPEED = 32,
-  FAN_DIR = 33,
+  FAN_ONOFF_SPEED = 33,
+  FAN_DIR = 34,
 };
 
 class Command
@@ -59,6 +60,7 @@ class BleAdvController : public Component, public EntityBase
   void set_tx_duration(uint32_t tx_duration) { this->tx_duration_ = tx_duration; }
   void set_forced_id(uint32_t forced_id) { this->forced_id_ = forced_id; }
   void set_variant(uint8_t variant) { this->variant_ = variant; }
+  void set_reversed(bool reversed) { this->reversed_ = reversed; }
 
 #ifdef USE_API
   // Services
@@ -68,7 +70,7 @@ class BleAdvController : public Component, public EntityBase
 #endif
 
   bool enqueue(Command &cmd);
-  
+
   // supported commands
   virtual bool is_supported(const Command &cmd) = 0;
 
@@ -80,6 +82,7 @@ class BleAdvController : public Component, public EntityBase
   uint32_t tx_duration_;
   uint32_t forced_id_ = 0;
   uint8_t variant_;
+  bool reversed_;
 
   std::queue<uint8_t *> commands_;
 

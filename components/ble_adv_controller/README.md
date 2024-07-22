@@ -16,7 +16,7 @@
 7. Use the newly created button to pair with your light (press the button withing 5 seconds of powering it with a switch).
 6. Enjoy controlling your BLE light with Home Assistant!
 
-## Example configuration: basic lamp using ZhiJia encoding and Pair button
+## Example configuration: basic lamp using ZhiJia encoding v2 and Pair button
 
 ```yaml
 ble_adv_controller:
@@ -28,7 +28,6 @@ light:
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller
     name: Kitchen Light
-    default_transition_length: 0s
 
 button:
   - platform: ble_adv_controller
@@ -52,14 +51,14 @@ ble_adv_controller:
     # duration: the duration during which the command is sent. 
     # Increasing this parameter will make the combination of commands slower, 
     # but it may be needed if your light is taking time to process a command
-    duration: 500
-    # reversed: (FanLamp only) reversing the cold / warm at encoding time, needed for some controllers
+    duration: 200
+    # reversed: reversing the cold / warm at encoding time, needed for some controllers
     # default to false
     reversed: false
     # forced_id: provide the 4 bytes identifier key extracted from your app phone traffic 
     # to share the same key than the phone
     # example: 0xBFF62757
-    # For ZhiJia, default to 0xC630B800 which was the value hard-coded in ble_adv_light component.
+    # For ZhiJia, default to 0xC630B8 which was the value hard-coded in ble_adv_light component. Max 0xFFFFFF.
     # For FanLamp: default to 0, uses the hash id computed by esphome from the id/name of the controller
     forced_id: 0
 
@@ -72,10 +71,11 @@ light:
     # index: the index of the light in case several lights are part of the same device
     # this option was NOT TESTED yet, it MAY work for fanlamp_pro / smartlamp_pro. Not available for zhijia.
     index: 0
-    # min_brightness: minimum brightness supported by the light before it shuts done
-    # just test your lamp by decreasing the brightness percent by percent. 
-    # when it switches off, you can find the 'cw' value in the logs, add 1 and you have your setting
-    min_brightness: 21
+    # min_brightness: % minimum brightness supported by the light before it shuts done
+    # just setup this value to 0, then test your lamp by decreasing the brightness percent by percent. 
+    # when it switches off, you have the min_brightness to setup here.
+    # Default to 21%
+    min_brightness: 21%
 
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller
@@ -107,7 +107,7 @@ button:
 
 If this component works, but the cold and warm temperatures are reversed (that is, setting the temperature in Home Assistant to warm results in cold/blue light, and setting it to cold results in warm/yellow light), add a `reversed: true` line to your `ble_adv_controller` config.
 
-If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a number between 1 and 255).
+If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a percentage).
 
 ## For the very tecki ones
 

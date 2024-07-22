@@ -27,45 +27,60 @@ void BleAdvLight::dump_config() {
 }
 
 void BleAdvLight::write_state(light::LightState *state) {
-  float cwf, wwf;
-  state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
-
-  if (!cwf && !wwf) {
+  // If target state is off, switch off
+  if (state->current_values.get_state() == 0) {
+    ESP_LOGD(TAG, "BleAdvLight::write_state - Switch OFF");
     this->command(CommandType::LIGHT_OFF);
     this->is_off_ = true;
-
     return;
   }
 
-  uint8_t cwi = (uint8_t)(0xff * cwf);
-  uint8_t wwi = (uint8_t)(0xff * wwf);
-
-  if ((cwi < this->min_brightness_) && (wwi < this->min_brightness_)) {
-    if (cwf > 0.000001) {
-      cwi = this->min_brightness_;
-    }
-    
-    if (wwf > 0.000001) {
-      wwi = this->min_brightness_;
-    }
-  }
-
-  ESP_LOGD(TAG, "BleAdvLight::write_state called! Requested cw: %d, ww: %d", cwi, wwi);
-
+  // If current state is off, switch on
   if (this->is_off_) {
+    ESP_LOGD(TAG, "BleAdvLight::write_state - Switch ON");
     this->command(CommandType::LIGHT_ON);
     this->is_off_ = false;
   }
 
-  if(this->get_parent()->is_supported(CommandType::LIGHT_WCOLOR)) {
-    this->command(CommandType::LIGHT_WCOLOR, cwi, wwi);
-  } else {
-    uint8_t cct_arg = (uint8_t) (255 * ((float) wwi / (cwi + wwi)));
-    uint8_t dim_arg = (uint8_t) (cwi + wwi > 255 ? 255 : cwi + wwi);
-    this->command(CommandType::LIGHT_CCT, cct_arg);
-    this->command(CommandType::LIGHT_DIM, dim_arg);
+  // Correct Brightness to avoid going under min_brightness defined
+  // from 0 -> 1 to min_brigthness -> 1
+  float eff_bri = this->min_brightness_ + state->current_values.get_brightness() * (1.f - this->min_brightness_);
+  ESP_LOGD(TAG, "Corrected brightness: %.0f%%", eff_bri*100.f);
+  state->current_values.set_brightness(eff_bri);
+
+  // Check if Brigtness / Color Temperature was modified
+  bool br_modified = this->brightness_ != state->current_values.get_brightness();
+  bool ct_modified = this->color_temperature_ != state->current_values.get_color_temperature();
+  if (!br_modified && !ct_modified) {
+    return;
   }
   
+  this->brightness_ = state->current_values.get_brightness();
+  this->color_temperature_ = state->current_values.get_color_temperature();
+
+  if(this->get_parent()->is_supported(CommandType::LIGHT_WCOLOR)) {
+    float cwf, wwf;
+    state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
+    // convert cold and warm from 0 -> 1 to 0 -> 255
+    uint8_t cwi = (uint8_t)(0xff * cwf);
+    uint8_t wwi = (uint8_t)(0xff * wwf);
+    ESP_LOGD(TAG, "BleAdvLight::write_state - Requested cold: %d, warm: %d", cwi, wwi);
+    this->command(CommandType::LIGHT_WCOLOR, cwi, wwi);
+  } else {
+    ESP_LOGD(TAG, "ct: %.3f, br: %.3f", this->color_temperature_, this->brightness_);
+    // convert color temp from cold_color -> warm_color to 0 -> 255 and brigtness from 0 -> 1 to 0 -> 255
+    uint8_t cti = (uint8_t)(0xff * (this->color_temperature_ - this->cold_white_temperature_) / (this->warm_white_temperature_ - this->cold_white_temperature_));
+    uint8_t bri = (uint8_t)(0xff * this->brightness_);
+    if (ct_modified) {
+      ESP_LOGD(TAG, "BleAdvLight::write_state - Requested color temperature: %d", cti);
+      this->command(CommandType::LIGHT_CCT, cti);
+    }
+    if (br_modified) {
+      ESP_LOGD(TAG, "BleAdvLight::write_state - Requested brightness: %d", bri);
+      this->command(CommandType::LIGHT_DIM, bri);
+    }
+  }
+
 }
 
 } // namespace bleadvcontroller
