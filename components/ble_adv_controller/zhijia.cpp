@@ -629,9 +629,9 @@ ZhijiaArgs_t ZhijiaController::translate_cmd(const Command &cmd) {
 void ZhijiaController::get_adv_data(uint8_t * buf, Command &cmd) {
   ZhijiaArgs_t cmd_real = this->translate_cmd(cmd);
   unsigned char uuid[3] = {0};
-  uuid[0] = (cmd.id_ & 0xFF000000) >> 24;
-  uuid[1] = (cmd.id_ & 0x00FF0000) >> 16;
-  uuid[2] = (cmd.id_ & 0x0000FF00) >> 8;
+  uuid[0] = (cmd.id_ & 0xFF0000) >> 16;
+  uuid[1] = (cmd.id_ & 0x00FF00) >> 8;
+  uuid[2] = (cmd.id_ & 0x0000FF);
   ESP_LOGD(TAG, "UUID: '0x%02X%02X%02X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d]", uuid[0], uuid[1], uuid[2], 
            cmd.tx_count_, cmd_real.cmd_, cmd_real.args_[0], cmd_real.args_[1], cmd_real.args_[2]);
   switch(this->variant_)

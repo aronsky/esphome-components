@@ -71,7 +71,7 @@ CONFIG_SCHEMA = cv.All(
                 cv.Optional(CONF_VARIANT, default="v2"): cv.enum(CONTROLLER_ZHIJIA_VARIANTS, lower=True),
                 cv.Optional(CONF_DURATION, default=100): cv.positive_int,
                 cv.Optional(CONF_REVERSED, default=False): cv.boolean,
-                cv.Optional(CONF_BLE_ADV_FORCED_ID, default=0xC630B800): cv.hex_uint32_t,
+                cv.Optional(CONF_BLE_ADV_FORCED_ID, default=0xC630B8): cv.All(cv.hex_uint32_t, cv.Range(min=0, max=0xFFFFFF)),
             }
         ),
     ),
