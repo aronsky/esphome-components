@@ -1,20 +1,48 @@
 # ble_adv_controller
 
-## Known issues
+## Goal and requirements
+The goal of this component is to build a hardware proxy [ESPHome based](https://esphome.io/) in between Home Assistant and Ceiling Fans and Lamps controlled using Bluetooth Low Energy(BLE) Advertising. If your Ceiling Fan or lamp is working with one of the following Android App, then you should be able to control it:
+* LampSmart Pro or FanLamp Pro (tested against Marpou Ceiling Light / IRALAN Lamp and Fan)
+* ZhiJia (tested against aftermarket LED drivers)
 
-* Only tested with Marpou Ceiling CCT light, and a certain aftermarket LED driver (definitely doesn't support RGB lights currently, but that could be added in the future).
-* ZhiJia based lights pairing functionality hasn't been tested - if controlling a light that's been paired using the ZhiJia app doesn't work, please let me know. Unpairing will definitely not work (not supported in the app).
+This component is an [ESPHome external component](https://esphome.io/components/external_components.html). In order to use it you will need to have:
+* A basic knowledge of [ESPHome](https://esphome.io/). A good entry point is [here](https://esphome.io/guides/getting_started_hassio.html).
+* The [ESPHome integration](https://www.home-assistant.io/integrations/esphome/) in Home Assistant
+* An [Espressif](https://www.espressif.com/) microcontroller supporting Bluetooth v4, such as any [ESP32](https://www.espressif.com/en/products/socs/esp32) based model. You can find some for a few dollars on any online marketplace searching for ESP32.
+
+When the setup will be completed you will have a new ESPHome device available in Home assistant, exposing standard entities such as:
+* Light(s) entity allowing the control of Color Temperature and Brightness
+* Fan entity allowing the control of Speed ( 3 or 6 levels) and direction forward / reverse
+* Button entity, for pairing
+
+## Known Limitations
+The technical solution implemented by manufacturers to control those devices is `BLE Advertising` and it comes with limitations:
+* The communication is unidirectional meaning any change done by one of the controlling element will never be known by the other elements: for example if you switch on the light using the remote, then neither Home Assistant nor the phone App will know it and will then not show an updated state.
+* Each command needs to be maintained for a given `duration` which is customizable by configuration but has drawbacks:
+  * If the value is too small, the targetted device may not receive it and then not process the command
+  * If the value is too high, each command is queued one after the other and then sending commands at a high rate will make the controller go wild.
+  * The use of ESPHome light `transitions` is highly discouraged (and deactivated by default) as it generates high command rate.
+* Some commands are the same for ON and OFF, working as a Toggle in fact. Sending high rate commands will cause the mix of ON and OFF commands and result in flickering and desynchronization of states.
 
 ## How to try it
 
-1. Create an ESPHome configuration that references the repo (using `external_components`)
-2. Add a lamp controller `ble_adv_controller` specifying its ID to be referenced by entities it controls. The ID is the referenced used to pair with the device: if it is changed the device needs to be re-paired with the new ID.
-3. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform
-4. Add a `pair` configuration button to ease the pairing action from HA
-5. Build the configuration and flash it to an ESP32 device (since BLE is used, ESP8266-based devices are a no-go)
-6. Add the new ESPHome node to your Home Assistant instance
-7. Use the newly created button to pair with your light (press the button withing 5 seconds of powering it with a switch).
-6. Enjoy controlling your BLE light with Home Assistant!
+1. As a preliminary step, be sure to be able to create a base ESPHome configuration from the ESPHome Dashboard, install it to your ESP32, have it available in Home Assistant and be able to access the logs (needed in case of issue). This is a big step if you are new to ESPHome but on top of [ESPHome doc](https://esphome.io/guides/getting_started_hassio.html) you will find tons of tutorial on the net for that.
+2. Add to your up and running ESPHome configuration the reference to this repo ([ESPHome external component](https://esphome.io/components/external_components.html))
+3. Add a lamp controller `ble_adv_controller` specifying:
+   * its `id` to be referenced by entities it controls. The `id` is also the reference used to pair with the device: if it is changed the device needs to be re-paired with the new `id`.
+   * its `encoding`, this is fully known from the controlling app, see the possible values in the examples below.
+   * its `variant`, this is the version of the encoding. keep the default value (last version) as a first step.
+4. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform
+5. Add a `pair` configuration button to ease the pairing action from HA
+6. Install and flash the ESP32 device
+7. Use the newly created button to pair with your light (press the button withing 5 seconds of powering it with a switch, the same way you would have done with the phone app). If the pairing works you should be able to control your light / fan from Home Assistant. If you are sure you followed the pairing procedure but you are **NOT** able to control ityour lamp from Home Assistant it means your Lamp is not using the latest version of the encoding, and that you will have to specify another `variant`, see the possible values in the examples. Once specified, go back to step 6.
+8. Enjoy controlling your BLE light with Home Assistant!
+
+## Known issues and not implemented or tested features
+
+* Does not support RGB lights for now, request it if needed.
+* ZhiJia encoding v0 and v1 have not been tested (as no end user available to test it and help debugging) and then may not work. Contact us if you have such device and we will make it work together!
+* Zhijia Fan feature has not been tested yet (same as previous).
 
 ## Example configuration: basic lamp using ZhiJia encoding v2 and Pair button
 
@@ -22,7 +50,7 @@
 ble_adv_controller:
   - id: my_controller
     encoding: zhijia
-    duration: 500
+    duration: 200
 
 light:
   - platform: ble_adv_controller
@@ -36,7 +64,7 @@ button:
     cmd: pair
 ```
 
-## Example configuration: Complex composed lamp using fanlamp_pro with 2 lights, a fan and a Pair button
+## Example configuration: Composed lamp using fanlamp_pro with a main light, a secondary light, a fan and a Pair button
 
 ```yaml
 ble_adv_controller:
@@ -66,7 +94,7 @@ light:
   - platform: ble_adv_controller
     # ble_adv_controller_id: the ID of your controller
     ble_adv_controller_id: my_controller
-    # name: the name as it will appear in 1A
+    # name: the name as it will appear in Home Assistant
     name: First Light
     # min_brightness: % minimum brightness supported by the light before it shuts done
     # just setup this value to 0, then test your lamp by decreasing the brightness percent by percent. 
@@ -77,8 +105,8 @@ light:
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller
     name: Secondary Light
-    # secondary: true. Qualifies this light as the secondary light to be controlled for FanLamp Lamp
-    # exclusive with any options for brightness / cold / warm 
+    # secondary: true. Qualifies this light as the secondary light to be controlled for FanLamp Lamp.
+    # Exclusive with any options for brightness / cold / warm 
     secondary: true
 
 fan:
