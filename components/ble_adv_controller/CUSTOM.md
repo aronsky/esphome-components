@@ -38,7 +38,7 @@ Supported Applications:
 To build the Manufacturer Data section corresponding to a command, the encoding is done as follow:
 * Convert the command and its parameters into a base 26 bytes structure containing among other:
   * A **type**: a 2 bytes code. No one found out yet the use of it, seems to be always 0x0100 but can be set to anything it seems
-  * An **index** / group_index: a 1 byte code allowing to identify sub entities. 0 for the main light, 1 for another light, ... (NOT TESTED YET)
+  * An **index** / group_index: a 1 byte code allowing to specify a sub-identifier. Quite useless for this component as it is able to specify different ids with forced_id / controller id.
   * A **command id**: a code based on one byte identifying a command. Different in between applications but usually common between variants of a same app.
   * Command **arguments**: 0 to 4 bytes containing parameters of the command (fan speed value, light brigthness, ...)
 * Add parameters from the controller part:
@@ -79,18 +79,20 @@ For info here are the "known" commands already extracted from code and their cor
 
 | Command      | ZhiJia v0   | ZhiJia v1   | ZhiJia v2   | FanLamp v1        | FanLamp v2        |
 |--------------|-------------|-------------|-------------|-------------------|-------------------|
-| pair         | 0xB4        | 0xA2        | 0xA2        | 0x28, garbage in args...  | 0x28              |
+| pair         | 0xB4        | 0xA2        | 0xA2        | 0x28, garbage in args...  | 0x28      |
 | unpair       | 0xB0        | 0xA3        | 0xA3        | 0x45              | 0x45              |
 | light_on     | 0xB3        | 0xA5        | 0xA5        | 0x10              | 0x10              |
 | light_off    | 0xB2        | 0xA6        | 0xA6        | 0x11              | 0x11              |
 | light_dim    | 0xB5, arg1=0..3, arg2| 0xAD, arg0  | 0xAD, arg0  | N/A      | N/A               |
 | light_cct    | 0xB7, arg1=0..3, arg2| 0xAE, arg0  | 0xAE, arg0  | N/A      | N/A               |
 | light_wcolor | N/A         | N/A         | N/A         | 0x21, arg0 arg1   | 0x21, arg2, arg3  |
+| light_sec_on | N/A         | N/A         | N/A         | 0x12              | 0x12              |
+| light_sec_off| N/A         | N/A         | N/A         | 0x13              | 0x13              |
 | fan_on       | N/A         | N/A         | 0xD2        | 0x31, arg0=0      | 0x31, arg2=0      |
 | fan_off      | N/A         | N/A         | 0xD3        | 0x31, arg0=0      | 0x31, arg2=0      |
 | fan_speed    | N/A         | N/A         | 0xDB + (2*)speed | N/A          | N/A               |
-| fan_onoff_speed(3)    | N/A         | N/A         | 0xD2        | 0x31, arg0=0..3     | 0x31, arg2=0..3 |
-| fan_onoff_speed(6)    | N/A         | N/A         | 0xD2        | 0x32, arg0=0..6, arg1=6 | 0x31, arg2=0..6, arg1=0x20      |
+| fan_onoff_speed(3)  | N/A  | N/A         | 0xD2        | 0x31, arg0=0..3     | 0x31, arg2=0..3 |
+| fan_onoff_speed(6)  | N/A  | N/A         | 0xD2        | 0x32, arg0=0..6, arg1=6 | 0x31, arg2=0..6, arg1=0x20      |
 | fan_dir      | N/A         | N/A         | N/A         | 0x15, arg0=0..1   | 0x15, arg1=0..1   |
 
 NOTE: the cmd code given are hexa codes, **you have to translate them into decimal for use in HA service**, use Windows Calculator in programmer mode.

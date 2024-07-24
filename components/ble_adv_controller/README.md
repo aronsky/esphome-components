@@ -68,9 +68,6 @@ light:
     ble_adv_controller_id: my_controller
     # name: the name as it will appear in 1A
     name: First Light
-    # index: the index of the light in case several lights are part of the same device
-    # this option was NOT TESTED yet, it MAY work for fanlamp_pro / smartlamp_pro. Not available for zhijia.
-    index: 0
     # min_brightness: % minimum brightness supported by the light before it shuts done
     # just setup this value to 0, then test your lamp by decreasing the brightness percent by percent. 
     # when it switches off, you have the min_brightness to setup here.
@@ -79,8 +76,10 @@ light:
 
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller
-    name: Second Light
-    index: 1
+    name: Secondary Light
+    # secondary: true. Qualifies this light as the secondary light to be controlled for FanLamp Lamp
+    # exclusive with any options for brightness / cold / warm 
+    secondary: true
 
 fan:
   - platform: ble_adv_controller

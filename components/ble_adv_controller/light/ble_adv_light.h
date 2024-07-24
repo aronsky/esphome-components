@@ -33,5 +33,18 @@ class BleAdvLight : public light::LightOutput, public BleAdvEntity, public Entit
   float color_temperature_{0};
 };
 
+class BleAdvSecLight : public light::LightOutput, public BleAdvEntity, public EntityBase
+{
+ public:
+  void dump_config() override;
+
+  void setup_state(light::LightState *state) override { this->state_ = state; };
+  void write_state(light::LightState *state) override;
+  light::LightTraits get_traits() override;
+
+ protected:
+  light::LightState * state_{nullptr};
+};
+
 } //namespace bleadvcontroller
 } //namespace esphome

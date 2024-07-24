@@ -23,6 +23,8 @@ enum CommandType {
   LIGHT_DIM = 15,
   LIGHT_CCT = 16,
   LIGHT_WCOLOR = 17,
+  LIGHT_SEC_ON = 18,
+  LIGHT_SEC_OFF = 19,
   FAN_ON = 30,
   FAN_OFF = 31,
   FAN_SPEED = 32,

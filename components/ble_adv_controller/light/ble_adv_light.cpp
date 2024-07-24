@@ -83,6 +83,34 @@ void BleAdvLight::write_state(light::LightState *state) {
 
 }
 
+/*********************
+Secondary Light
+**********************/
+
+light::LightTraits BleAdvSecLight::get_traits() {
+  auto traits = light::LightTraits();
+  traits.set_supported_color_modes({light::ColorMode::ON_OFF});
+  return traits;
+}
+
+void BleAdvSecLight::dump_config() {
+  ESP_LOGCONFIG(TAG, "BleAdvSecLight");
+  BleAdvEntity::dump_config_base(TAG);
+  ESP_LOGCONFIG(TAG, "  Base Light '%s'", this->state_->get_name().c_str());
+}
+
+void BleAdvSecLight::write_state(light::LightState *state) {
+  bool binary;
+  state->current_values_as_binary(&binary);
+  if (binary) {
+    ESP_LOGD(TAG, "BleAdvSecLight::write_state - Switch ON");
+    this->command(CommandType::LIGHT_SEC_ON);
+  } else {
+    ESP_LOGD(TAG, "BleAdvSecLight::write_state - Switch OFF");
+    this->command(CommandType::LIGHT_SEC_OFF);
+  }
+}
+
 } // namespace bleadvcontroller
 } // namespace esphome
 

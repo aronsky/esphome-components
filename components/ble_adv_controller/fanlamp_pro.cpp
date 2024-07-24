@@ -169,6 +169,12 @@ FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
         cmd_real.args_[1] = this->reversed_ ? cmd.args_[0] : cmd.args_[1];
       }
       break;
+    case CommandType::LIGHT_SEC_ON:
+      cmd_real.cmd_ = 0x12;
+      break;
+    case CommandType::LIGHT_SEC_OFF:
+      cmd_real.cmd_ = 0x13;
+      break;
     case CommandType::FAN_ONOFF_SPEED:
       if(isV2) {
         cmd_real.cmd_ = 0x31;

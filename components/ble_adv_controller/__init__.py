@@ -48,7 +48,7 @@ ENTITY_BASE_CONFIG_SCHEMA = cv.Schema(
     {
         cv.Required(CONF_BLE_ADV_CONTROLLER_ID): cv.use_id(BleAdvController),
         #cv.Optional(CONF_TYPE, default=0x0100): cv.hex_uint16_t,
-        cv.Optional(CONF_INDEX, default=0): cv.uint8_t,
+        #cv.Optional(CONF_INDEX, default=0): cv.uint8_t,
     }
 )
 
@@ -84,7 +84,7 @@ async def entity_base_code_gen(var, config):
     await cg.register_component(var, config)
     await setup_entity(var, config)
     #cg.add(var.set_type(config[CONF_TYPE]))
-    cg.add(var.set_index(config[CONF_INDEX]))
+    #cg.add(var.set_index(config[CONF_INDEX]))
 
 async def to_code(config):
     # Defaulting NAME to ID in case not present, to ease object_id_hash creation
