@@ -181,9 +181,11 @@ FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
       }
       break;
     case CommandType::FAN_DIR:
+      cmd_real.cmd_ = 0x15;
       if(isV2) {
-        cmd_real.cmd_ = 0x15;
         cmd_real.args_[1] = !cmd.args_[0];
+      } else {
+        cmd_real.args_[0] = !cmd.args_[0];
       }
       break;
     case CommandType::NOCMD:

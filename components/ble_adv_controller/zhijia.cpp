@@ -69,12 +69,11 @@ uint16_t crc16(uint8_t *addr, size_t addr_length, uint8_t *data, size_t data_len
 // Whitening initialization
 void whitening_init(uint8_t val, int *ctx, size_t ctx_length)
 {
-    uint8_t v0[] = {(val >> 5) & 1, (val >> 4) & 1, (val >> 3) & 1, (val >> 2) & 1};
     ctx[0] = 1;
-    ctx[1] = v0[0];
-    ctx[2] = v0[1];
-    ctx[3] = v0[2];
-    ctx[4] = v0[3];
+    ctx[1] = (val >> 5) & 1;
+    ctx[2] = (val >> 4) & 1;
+    ctx[3] = (val >> 3) & 1;
+    ctx[4] = (val >> 2) & 1;
     ctx[5] = (val >> 1) & 1;
     ctx[6] = val & 1;
 }
