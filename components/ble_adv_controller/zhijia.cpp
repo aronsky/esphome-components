@@ -581,6 +581,22 @@ ZhijiaArgs_t ZhijiaController::translate_cmd(const Command &cmd) {
         cmd_real.args_[0] = this->reversed_ ? 255 - cmd.args_[0] : cmd.args_[0];
       }
       break;
+    case CommandType::LIGHT_SEC_ON:
+      if(isV0) {
+        cmd_real.cmd_ = 0xA6; // -90
+        cmd_real.args_[0] = 1;
+      } else {
+        cmd_real.cmd_ = 0xAF; // -81
+      }
+      break;
+    case CommandType::LIGHT_SEC_OFF:
+      if(isV0) {
+        cmd_real.cmd_ = 0xA6; // -90
+        cmd_real.args_[0] = 2;
+      } else {
+        cmd_real.cmd_ = 0xB0; // -80
+      }
+      break;
     case CommandType::FAN_ON:
       cmd_real.cmd_ = isV2 ? 0xD2 : 0; // -47
       break;

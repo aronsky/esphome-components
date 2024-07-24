@@ -105,7 +105,7 @@ light:
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller
     name: Secondary Light
-    # secondary: true. Qualifies this light as the secondary light to be controlled for FanLamp Lamp.
+    # secondary: true. Qualifies this light as the secondary light to be controlled.
     # Exclusive with any options for brightness / cold / warm 
     secondary: true
 
