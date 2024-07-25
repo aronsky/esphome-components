@@ -20,6 +20,7 @@ from .. import (
 
 from ..const import (
     CONF_BLE_ADV_SECONDARY,
+    CONF_BRIGHTNESS_AFTER_COLOR_CHANGE,
 )
 
 BleAdvLight = bleadvcontroller_ns.class_('BleAdvLight', light.LightOutput, BleAdvEntity)
@@ -36,6 +37,7 @@ CONFIG_SCHEMA = cv.All(
                 cv.Optional(CONF_MIN_BRIGHTNESS, default=0.21): cv.percentage,
                 # override default value of default_transition_length to 0s as mostly not supported by those lights
                 cv.Optional(CONF_DEFAULT_TRANSITION_LENGTH, default="0s"): cv.positive_time_period_milliseconds,
+                cv.Optional(CONF_BRIGHTNESS_AFTER_COLOR_CHANGE, default=False): cv.boolean,
             }
         ).extend(ENTITY_BASE_CONFIG_SCHEMA),
         light.RGB_LIGHT_SCHEMA.extend(
@@ -60,3 +62,4 @@ async def to_code(config):
         cg.add(var.set_warm_white_temperature(config[CONF_WARM_WHITE_COLOR_TEMPERATURE]))
         cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
         cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS]))
+        cg.add(var.set_brightness_after_color_change(config[CONF_BRIGHTNESS_AFTER_COLOR_CHANGE]))

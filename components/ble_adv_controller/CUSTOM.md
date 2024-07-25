@@ -106,17 +106,28 @@ Well one can try all options and values... Or try to read the decompiled softwar
 ```
 sendMessage(cmd1, args1[3], cmd2, args2[3], duration)
 ```
-This function is then processing the following advertisings sequentially:
-1. Advertise (cmd1, args1[3]) encoded with MSC16.msc16
-2. Advertise (cmd2, args2[3]) encoded with MSC26.msc26
-3. Advertise (cmd2, args2[3]) encoded with MSC26A.msc26
-
-For now, in this component only the advertising (3) is implemented, and then only the (cmd2, args2[3]) is used
+This function is then processing the following advertising sequentially and in loop, each of them advertised during 120ms and then going to the next one, limited to 60 advertising (7.2s max then) if no other command is issued:
+1. Advertise (cmd2, args2[3]) encoded with MSC26A.msc26: v2
+2. Advertise (cmd2, args2[3]) encoded with MSC26.msc26: v1
+3. Advertise (cmd1, args1[3]) encoded with MSC16.msc16: v0
+ 
+Only one of those advertising is effectively needed to control a Lamp, thus in this component you can choose which one to use (variant).
 
 ```
-startAdvertising(cmd2, args2[3])
+startAdvertising(cmd2, args2[3], duration)
 ```
-This function is advertising (cmd2, args2[3]) encoded with MSC26A.msc26
+This function is advertising (cmd2, args2[3]) encoded with MSC26A.msc26 (v2) during 3s max if no other command is issued.
+
+---
+**NOTE**: Minimum advertising time
+
+The minimum advertising time depends on the parameter of the next command to be executed (`duration` in the function called), it could be INTERVAL_CLICK (80ms, used most of the time) or INTERVAL_ACTION (360ms, used for setBeganColorTemperature and setBeganBrightness only): if the new command is issued before the minimum advertising time it specifies, then it is just... ignored...
+
+The ColorTemperature and Brigthness commands seem to be done in 2 steps (began and end), despite those 2 steps are implemented the same way except for the minimum advertising time... Taking the example of the Color Temperature:
+* When the Color Temperature progress bar starts to be changed, the setBeganColorTemperature is called a first time
+* It is then called each time the progress bar is reported as changing. As per previous comment on minimum advertising time, this means most of those calls are ignored, keeping one every 360ms max.
+* When the progress bar stops being changed a last call is done to setEndColorTemperature. The only difference is that it is taken into account only if a command was not previously issued in the last 80ms.
+---
 
 The cmd codes are negative in the decompiled software, no idea why, but to transform them one can add 256.
 

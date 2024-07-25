@@ -2,7 +2,7 @@
 
 ## Goal and requirements
 The goal of this component is to build a hardware proxy [ESPHome based](https://esphome.io/) in between Home Assistant and Ceiling Fans and Lamps controlled using Bluetooth Low Energy(BLE) Advertising. If your Ceiling Fan or lamp is working with one of the following Android App, then you should be able to control it:
-* LampSmart Pro or FanLamp Pro (tested against Marpou Ceiling Light / IRALAN Lamp and Fan)
+* LampSmart Pro or FanLamp Pro (tested against Marpou Ceiling Light / IRALAN Lamp and Fan / AQUBT Ceiling Fans)
 * ZhiJia (tested against aftermarket LED drivers)
 
 This component is an [ESPHome external component](https://esphome.io/components/external_components.html). In order to use it you will need to have:
@@ -31,18 +31,17 @@ The technical solution implemented by manufacturers to control those devices is 
 3. Add a lamp controller `ble_adv_controller` specifying:
    * its `id` to be referenced by entities it controls. The `id` is also the reference used to pair with the device: if it is changed the device needs to be re-paired with the new `id`.
    * its `encoding`, this is fully known from the controlling app, see the possible values in the examples below.
-   * its `variant`, this is the version of the encoding. keep the default value (last version) as a first step.
+   * its `variant`, this is the version of the encoding. Keep the default value (last version) as a first step, this will probably be the good one if your light is recent.
 4. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform
 5. Add a `pair` configuration button to ease the pairing action from HA
 6. Install and flash the ESP32 device
-7. Use the newly created button to pair with your light (press the button withing 5 seconds of powering it with a switch, the same way you would have done with the phone app). If the pairing works you should be able to control your light / fan from Home Assistant. If you are sure you followed the pairing procedure but you are **NOT** able to control ityour lamp from Home Assistant it means your Lamp is not using the latest version of the encoding, and that you will have to specify another `variant`, see the possible values in the examples. Once specified, go back to step 6.
+7. Use the newly created button in Home Assistant to pair with your light (press the button withing 5 seconds of powering the lamp with a switch, the same way you would have done with the phone app). If the pairing works you should be able to control your light / fan from Home Assistant. If you are sure you followed the pairing procedure but you are **NOT** able to control your lamp from Home Assistant it means your Lamp is not using the latest version of the encoding, and that you will have to specify another `variant`, see the possible values in the examples. Once specified, go back to step 6.
 8. Enjoy controlling your BLE light with Home Assistant!
 
 ## Known issues and not implemented or tested features
 
 * Does not support RGB lights for now, request it if needed.
-* ZhiJia encoding v0 and v1 have not been tested (as no end user available to test it and help debugging) and then may not work. Contact us if you have such device and we will make it work together!
-* Zhijia Fan feature has not been tested yet (same as previous).
+* ZhiJia encoding v0 and v1 (may be needed for older version of Lamps controlled with ZhiJia app) have not been tested (as no end user available to test it and help debugging) and then may not work. Contact us if you have such device and we will make it work together!
 
 ## Example configuration: basic lamp using ZhiJia encoding v2 and Pair button
 
@@ -101,6 +100,9 @@ light:
     # when it switches off, you have the min_brightness to setup here.
     # Default to 21%
     min_brightness: 21%
+    # send_brightness_after_color_temperature_change: refresh the brightness after the color temperature was changed.
+    # workaround for issue https://github.com/aronsky/esphome-components/issues/18
+    send_brightness_after_color_temperature_change: false
 
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller

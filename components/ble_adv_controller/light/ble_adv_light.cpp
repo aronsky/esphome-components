@@ -75,7 +75,7 @@ void BleAdvLight::write_state(light::LightState *state) {
       ESP_LOGD(TAG, "BleAdvLight::write_state - Requested color temperature: %d", cti);
       this->command(CommandType::LIGHT_CCT, cti);
     }
-    if (br_modified) {
+    if (br_modified || (this->brightness_after_color_change_ && ct_modified)) {
       ESP_LOGD(TAG, "BleAdvLight::write_state - Requested brightness: %d", bri);
       this->command(CommandType::LIGHT_DIM, bri);
     }
