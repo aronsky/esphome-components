@@ -130,12 +130,12 @@ uint8_t reverse_byte(uint8_t x) {
   return x;
 }
 
-bool FanLampController::is_supported(const Command &cmd) {
+bool FanLampEncoder::is_supported(const Command &cmd) {
   FanLampArgs cmd_real = translate_cmd(cmd);
   return (cmd_real.cmd_ != 0);
 }
 
-FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
+FanLampArgs FanLampEncoder::translate_cmd(const Command &cmd) {
   FanLampArgs cmd_real;
   bool isV2 = ((this->variant_ == VARIANT_2) || (this->variant_ == VARIANT_3));
   switch(cmd.cmd_)
@@ -161,12 +161,19 @@ FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
       break;
     case CommandType::LIGHT_WCOLOR:
       cmd_real.cmd_ = 0x21;
-      if (isV2) {
-        cmd_real.args_[2] = this->reversed_ ? cmd.args_[1] : cmd.args_[0];
-        cmd_real.args_[3] = this->reversed_ ? cmd.args_[0] : cmd.args_[1];
-      } else {
-        cmd_real.args_[0] = this->reversed_ ? cmd.args_[1] : cmd.args_[0];
-        cmd_real.args_[1] = this->reversed_ ? cmd.args_[0] : cmd.args_[1];
+      {
+        // Correct minimum brightness in any case for FanLamp as it could switch off if too low
+        // and this would create different state in between the light and this component
+        uint8_t br_corrected = std::max(cmd.args_[1], (uint8_t)7);
+        uint8_t cold = (br_corrected * (255 - cmd.args_[0])) / 255;
+        uint8_t warm = (br_corrected * (cmd.args_[0])) / 255;
+        if (isV2) {
+          cmd_real.args_[2] = cold;
+          cmd_real.args_[3] = warm;
+        } else {
+          cmd_real.args_[0] = cold;
+          cmd_real.args_[1] = warm;
+        }
       }
       break;
     case CommandType::LIGHT_SEC_ON:
@@ -207,7 +214,7 @@ FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
   return cmd_real;
 }
 
-void FanLampController::build_packet_v1(uint8_t* buf, Command &cmd) {
+void FanLampEncoder::build_packet_v1(uint8_t* buf, Command &cmd) {
   uint16_t seed = this->get_seed();
   man_data_v1_t *packet = (man_data_v1_t*)buf;
   std::copy(PREFIXv1, PREFIXv1 + sizeof(PREFIXv1), packet->prefix);
@@ -230,11 +237,11 @@ void FanLampController::build_packet_v1(uint8_t* buf, Command &cmd) {
   }
   packet->crc16 = htons(v2_crc16_ccitt(buf + 8, 12, ~seed));
   
-  ESP_LOGD(TAG, "ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d]", cmd.id_, packet->tx_count, 
-          packet->command, packet->channel1, packet->channel2, packet->channel3);
+  ESP_LOGD(TAG, "%s - ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d]", this->id_.c_str(), cmd.id_, 
+          packet->tx_count, packet->command, packet->channel1, packet->channel2, packet->channel3);
 }
 
-void FanLampController::build_packet_v1a(uint8_t* buf, Command &cmd) {
+void FanLampEncoder::build_packet_v1a(uint8_t* buf, Command &cmd) {
 
   const size_t base = sizeof(HEADERv1a);
   const size_t size = 26;
@@ -254,7 +261,7 @@ void FanLampController::build_packet_v1a(uint8_t* buf, Command &cmd) {
   v1_whiten(buf + base, 15, size-base, 83);
 }
 
-void FanLampController::build_packet_v1b(uint8_t* buf, Command &cmd) {
+void FanLampEncoder::build_packet_v1b(uint8_t* buf, Command &cmd) {
   const size_t base = sizeof(HEADERv1b);
   const size_t size = 26;
   std::copy(HEADERv1b, HEADERv1b + base, buf);
@@ -271,7 +278,7 @@ void FanLampController::build_packet_v1b(uint8_t* buf, Command &cmd) {
   v1_whiten(buf + base, 16, size-base, 83);
 }
 
-void FanLampController::build_packet_v2(uint8_t * buf, Command &cmd, bool with_sign) {
+void FanLampEncoder::build_packet_v2(uint8_t * buf, Command &cmd, bool with_sign) {
   uint16_t seed = this->get_seed();
   man_data_v2_t * packet = (man_data_v2_t *) buf;
   std::copy(PREFIXv2, PREFIXv2 + sizeof(PREFIXv2), packet->prefix);
@@ -284,8 +291,8 @@ void FanLampController::build_packet_v2(uint8_t * buf, Command &cmd, bool with_s
   packet->group_index = cmd.index_;
   packet->rand = seed;
 
-  ESP_LOGD(TAG, "ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d,%d]", cmd.id_, packet->packet_number, 
-          packet->command, packet->args[0], packet->args[1], packet->args[2], packet->args[3]);
+  ESP_LOGD(TAG, "%s - ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d,%d]", this->id_.c_str(), cmd.id_, 
+          packet->packet_number, packet->command, packet->args[0], packet->args[1], packet->args[2], packet->args[3]);
 
   if (with_sign) {
     packet->sign = sign(buf + 3, packet->packet_number, seed);
@@ -295,29 +302,49 @@ void FanLampController::build_packet_v2(uint8_t * buf, Command &cmd, bool with_s
   packet->crc16 = v2_crc16_ccitt(buf + 2, 22, ~seed);
 }
 
-uint16_t FanLampController::get_seed() {
+uint16_t FanLampEncoder::get_seed() {
   uint16_t seed = (uint16_t) rand() % 0xFFF5;
   return seed;
 }
 
-void FanLampController::get_adv_data(uint8_t * buf, Command &cmd) {
+uint8_t FanLampEncoder::get_adv_data(std::vector< BleAdvParam > & params, Command &cmd) {
+  params.emplace_back();
+  BleAdvParam & param = params.back();
   switch (this->variant_) {
     case VARIANT_3:
-      this->build_packet_v2(buf, cmd, true);
+      this->build_packet_v2(param.buf_, cmd, true);
       break;
     case VARIANT_2:
-      this->build_packet_v2(buf, cmd, false);
+      this->build_packet_v2(param.buf_, cmd, false);
       break;
     case VARIANT_1A:
-      this->build_packet_v1a(buf, cmd);
+      this->build_packet_v1a(param.buf_, cmd);
       break;
     case VARIANT_1B:
-      this->build_packet_v1b(buf, cmd);
+      this->build_packet_v1b(param.buf_, cmd);
       break;
     default:
       ESP_LOGW(TAG, "get_adv_data called with invalid variant %d", this->variant_);
       break;
   }
+  return 1;
+}
+
+void FanLampEncoder::register_encoders(BleAdvHandler * handler, const std::string & encoding) {
+  BleAdvMultiEncoder * fanlamp_all = new BleAdvMultiEncoder("FanLamp - All", encoding);
+  handler->add_encoder(fanlamp_all);
+  BleAdvEncoder * fanlamp_1a = new FanLampEncoder("FanLamp - v1a", encoding, FanLampVariant::VARIANT_1A);
+  handler->add_encoder(fanlamp_1a);
+  fanlamp_all->add_encoder(fanlamp_1a);
+  BleAdvEncoder * fanlamp_1b = new FanLampEncoder("FanLamp - v1b", encoding, FanLampVariant::VARIANT_1B);
+  handler->add_encoder(fanlamp_1b);
+  fanlamp_all->add_encoder(fanlamp_1b);
+  BleAdvEncoder * fanlamp_v2 = new FanLampEncoder("FanLamp - v2", encoding, FanLampVariant::VARIANT_2);
+  handler->add_encoder(fanlamp_v2);
+  fanlamp_all->add_encoder(fanlamp_v2);
+  BleAdvEncoder * fanlamp_v3 = new FanLampEncoder("FanLamp - v3", encoding, FanLampVariant::VARIANT_3);
+  handler->add_encoder(fanlamp_v3);
+  fanlamp_all->add_encoder(fanlamp_v3);
 }
 
 } // namespace bleadvcontroller

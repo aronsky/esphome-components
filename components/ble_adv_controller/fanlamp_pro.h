@@ -12,11 +12,15 @@ typedef struct {
   uint8_t args_[4]{0};
 } FanLampArgs;
 
-class FanLampController: public BleAdvController
+class FanLampEncoder: public BleAdvEncoder
 {
 public:
+  FanLampEncoder(const std::string & name, const std::string & encoding, FanLampVariant variant):
+         BleAdvEncoder(name, encoding, variant) {}
+
   virtual bool is_supported(const Command &cmd) override;
-  virtual void get_adv_data(uint8_t * buf, Command &cmd) override;
+  virtual uint8_t get_adv_data(std::vector< BleAdvParam > & params, Command &cmd) override;
+  static void register_encoders(BleAdvHandler * handler, const std::string & encoding);
 
 protected:
   virtual FanLampArgs translate_cmd(const Command &cmd);

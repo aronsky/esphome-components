@@ -18,10 +18,10 @@ When the setup will be completed you will have a new ESPHome device available in
 ## Known Limitations
 The technical solution implemented by manufacturers to control those devices is `BLE Advertising` and it comes with limitations:
 * The communication is unidirectional meaning any change done by one of the controlling element will never be known by the other elements: for example if you switch on the light using the remote, then neither Home Assistant nor the phone App will know it and will then not show an updated state.
-* Each command needs to be maintained for a given `duration` which is customizable by configuration but has drawbacks:
+* Each command needs to be maintained for a given minimum `duration` which is customizable by configuration but has drawbacks:
   * If the value is too small, the targetted device may not receive it and then not process the command
-  * If the value is too high, each command is queued one after the other and then sending commands at a high rate will make the controller go wild.
-  * The use of ESPHome light `transitions` is highly discouraged (and deactivated by default) as it generates high command rate.
+  * If the value is too high, each command is queued one after the other and then sending commands at a high rate will make delay more and more the commands.
+  * The use of ESPHome light `transitions` is not recommended (and deactivated by default) as it generates high command rate. A mitigation has been implemented in order to remove commands of the same type from the processing queue when a new one is received, it seriously improves the behavior of the component but it is still not perfect.
 * Some commands are the same for ON and OFF, working as a Toggle in fact. Sending high rate commands will cause the mix of ON and OFF commands and result in flickering and desynchronization of states.
 
 ## How to try it
@@ -30,12 +30,16 @@ The technical solution implemented by manufacturers to control those devices is 
 2. Add to your up and running ESPHome configuration the reference to this repo ([ESPHome external component](https://esphome.io/components/external_components.html))
 3. Add a lamp controller `ble_adv_controller` specifying:
    * its `id` to be referenced by entities it controls. The `id` is also the reference used to pair with the device: if it is changed the device needs to be re-paired with the new `id`.
-   * its `encoding`, this is fully known from the controlling app, see the possible values in the examples below.
+   * its `encoding`, this is fully known from the phone controlling app, see the possible values in the examples below.
    * its `variant`, this is the version of the encoding. Keep the default value (last version) as a first step, this will probably be the good one if your light is recent.
 4. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform
 5. Add a `pair` configuration button to ease the pairing action from HA
 6. Install and flash the ESP32 device
-7. Use the newly created button in Home Assistant to pair with your light (press the button withing 5 seconds of powering the lamp with a switch, the same way you would have done with the phone app). If the pairing works you should be able to control your light / fan from Home Assistant. If you are sure you followed the pairing procedure but you are **NOT** able to control your lamp from Home Assistant it means your Lamp is not using the latest version of the encoding, and that you will have to specify another `variant`, see the possible values in the examples. Once specified, go back to step 6.
+7. If you are not sure of the Variant to use to Pair the device, you can use the dynamic configuration of the encoding in Home Assistant (in the configuration part near the Pair Button) to select the "FanLamp - All" or "Zhi Jia - All" in order to use the multi advertising with all known variants for the app.
+8. Use the newly created button in Home Assistant to pair with your light (press the button withing 5 seconds of powering the lamp with a switch, the same way you would have done with the phone app). If you selected the "All" configuration, the pairing should work!.
+9. Try to switch ON / OFF your light, it will work if the pairing worked
+10. If you keep this "All" encoding, it will work, but it is sub optimal as the component will send 3 or 4 messages for each command, which will make it very slow... Just change the encoding to one of the variant and re try to switch your light ON/OFF: if it works you have the good variant! If not just try the next one, you should be able to find the relevant one in a few seconds :smile:
+11. Once you have found your `variant`, reference it in your config and re-flash to have it as default value, else the config will be lost on restart
 8. Enjoy controlling your BLE light with Home Assistant!
 
 ## Known issues and not implemented or tested features
@@ -75,9 +79,14 @@ ble_adv_controller:
     # For ZhiJia: Can be v0 (MSC16), v1 (MSC26) or v2 (MSC26A), default is v2
     # For Fanlamp: Can be any of 'v1a', 'v1b', 'v2' or 'v3', depending on how old your lamp is... Default is 'v3'
     variant: v3
-    # duration: the duration during which the command is sent. 
-    # Increasing this parameter will make the combination of commands slower, 
-    # but it may be needed if your light is taking time to process a command
+    # max_duration (default 3000): the maximum duration during which the command is advertized.
+    # if a command is received before the 'max_duration' but after the 'duration', it is processed immediately 
+    # Increasing this parameter will make the combination of commands slower
+    max_duration: 3000
+    # duration (default 200): the MINIMUM duration during which the command is sent.
+    # if a command is received before the 'duration' it is queued and processed later, 
+    # if there is already a similar command pending, in this case the pending command is removed from the queue
+    # Increasing this parameter will make the combination of commands slower
     duration: 200
     # reversed: reversing the cold / warm at encoding time, needed for some controllers
     # default to false

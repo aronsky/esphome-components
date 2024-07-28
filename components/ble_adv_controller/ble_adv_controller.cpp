@@ -6,11 +6,18 @@ namespace esphome {
 namespace bleadvcontroller {
 
 static const char *TAG = "ble_adv_controller";
-const size_t MAX_PACKET_LEN = 26;
 
-// global attribute to know if a controller is already advertising data
-// as 2 controllers cannot advertise at the same time
-static bool IsBleAdvAdvertisingUsed = false;
+void BleAdvSelect::set_id(const char * name, const StringRef & parent_name) {
+  // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
+  this->ref_name_ = std::string(name) + " - " + std::string(parent_name);
+  this->set_object_id(this->ref_name_.c_str());
+  this->set_name(this->ref_name_.c_str());
+}
+
+void BleAdvController::set_encoding_and_variant(const std::string & encoding, uint8_t variant) {
+  this->select_encoding_.traits.set_options(this->handler_->get_ids(encoding));
+  this->select_encoding_.state = this->handler_->get_encoder(encoding, variant).get_id();
+}
 
 void BleAdvController::setup() {
 #ifdef USE_API
@@ -18,16 +25,18 @@ void BleAdvController::setup() {
   register_service(&BleAdvController::on_unpair, "unpair_" + this->get_object_id());
   register_service(&BleAdvController::on_cmd, "cmd_" + this->get_object_id(), {"type", "index", "cmd", "arg0", "arg1", "arg2", "arg3"});
 #endif
-  // defaulting to built-in hash from id or name
-  if (this->forced_id_ == 0) {
-    this->forced_id_ = this->get_object_id_hash();
-  }
+  // init select for encoding
+  this->select_encoding_.set_id("Encoding", this->get_name());
+  this->select_encoding_.set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+  this->select_encoding_.publish_state(this->select_encoding_.state);
 }
 
 void BleAdvController::dump_config() {
   ESP_LOGCONFIG(TAG, "BleAdvController '%s'", this->get_object_id().c_str());
   ESP_LOGCONFIG(TAG, "  Hash ID '%X'", this->forced_id_);
-  ESP_LOGCONFIG(TAG, "  Transmission Duration: %d ms", tx_duration_);
+  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %d ms", this->min_tx_duration_);
+  ESP_LOGCONFIG(TAG, "  Transmission Max Duration: %d ms", this->max_tx_duration_);
+  ESP_LOGCONFIG(TAG, "  Transmission Sequencing Duration: %d ms", this->seq_duration_);
 }
 
 #ifdef USE_API
@@ -55,52 +64,67 @@ void BleAdvController::on_cmd(int type, int index, int cmd_type, int arg0, int a
 #endif
 
 bool BleAdvController::enqueue(Command &cmd) {
-  if (!this->is_supported(cmd)) {
+  // get the encoder from the currently selected one
+  BleAdvEncoder & encoder = this->get_encoder();
+
+  if (!encoder.is_supported(cmd)) {
     ESP_LOGW(TAG, "Unsupported command received: %d. Aborted.", cmd.cmd_);
     return false;
   }
-  uint8_t * buffer = new uint8_t[MAX_PACKET_LEN] {0};
-  ++this->tx_count_;
+
+  cmd.tx_count_ = this->tx_count_;
+  cmd.id_ = this->forced_id_;
+
+  // Remove any previous command of the same type in the queue, if not used for several purposes
+  if (cmd.cmd_ != CommandType::FAN_ONOFF_SPEED // Used for ON / OFF / SPEED
+      && cmd.cmd_ != CommandType::FAN_DIR      // Used for Direction ON / OFF
+      && cmd.cmd_ != CommandType::FAN_OSC      // Used for Oscillation ON / OFF
+      && cmd.cmd_ != CommandType::CUSTOM) {
+    uint8_t nb_rm = std::count_if(this->commands_.begin(), this->commands_.end(), [&](QueueItem& q){ return q.cmd_type_ == cmd.cmd_; });
+    if (nb_rm) {
+      ESP_LOGD(TAG, "Removing %d previous pending commands", nb_rm);
+      this->commands_.remove_if( [&](QueueItem& q){ return q.cmd_type_ == cmd.cmd_; } );
+    }
+  }
+
+  // enqueue the new command and encode the buffer(s)
+  this->commands_.emplace_back(cmd.cmd_);
+  this->tx_count_ += encoder.get_adv_data(this->commands_.back().params_, cmd);
   if (this->tx_count_ > 127) {
     this->tx_count_ = 1;
   }
-  cmd.tx_count_ = this->tx_count_;
-  cmd.id_ = this->forced_id_;
-  this->get_adv_data(buffer, cmd);
 
-  this->commands_.push(buffer);
+  // setup seq duration for each packet
+  bool use_seq_duration = (this->seq_duration_ > 0) && (this->seq_duration_ < this->min_tx_duration_);
+  for (auto & param : this->commands_.back().params_) {
+    param.duration_ = use_seq_duration ? this->seq_duration_: this->min_tx_duration_;
+  }
+  
   return true;
 }
 
 void BleAdvController::loop() {
   uint32_t now = millis();
   if(this->adv_start_time_ == 0) {
-    // no on going command advertised by this controller
-    // check if any to advertise and no other controller is already advertising data
-    if(!this->commands_.empty() && !IsBleAdvAdvertisingUsed) {
-      // Prevent other controllers to advertise
-      IsBleAdvAdvertisingUsed = true;
+    // no on going command advertised by this controller, check if any to advertise
+    if(!this->commands_.empty()) {
+      QueueItem & item = this->commands_.front();
+      for (auto & param : item.params_) {
+        ESP_LOGD(TAG, "%s - request start advertising: %s", this->get_object_id().c_str(), 
+                esphome::format_hex_pretty(param.buf_, param.len_).c_str());
+      }
+      this->adv_id_ = this->handler_->add_to_advertiser(item.params_);
       this->adv_start_time_ = now;
-      this->adv_data_.p_manufacturer_data = this->commands_.front();
-      this->commands_.pop();
-      this->adv_data_.manufacturer_len = MAX_PACKET_LEN;
-      ESP_LOGD(TAG, "%s - start advertising: %s", this->get_object_id().c_str(), 
-              esphome::format_hex_pretty(this->adv_data_.p_manufacturer_data, MAX_PACKET_LEN).c_str());
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_config_adv_data(&(this->adv_data_)));
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_start_advertising(&(this->adv_params_)));
+      this->commands_.pop_front();
     }
   }
   else {
     // command is being advertised by this controller, check if stop and clean-up needed
-    if (now > this->adv_start_time_ + this->tx_duration_) {
-      ESP_LOGD(TAG, "%s - stop advertising", this->get_object_id().c_str());
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_stop_advertising());
-      delete[] this->adv_data_.p_manufacturer_data;
-      this->adv_data_.p_manufacturer_data = nullptr;
-      this->adv_data_.manufacturer_len = 0;
+    uint32_t duration = this->commands_.empty() ? this->max_tx_duration_ : this->min_tx_duration_;
+    if (now > this->adv_start_time_ + duration) {
       this->adv_start_time_ = 0;
-      // Allow other controllers to advertise again
-      IsBleAdvAdvertisingUsed = false;
+      ESP_LOGD(TAG, "%s - request stop advertising", this->get_object_id().c_str());
+      this->handler_->remove_from_advertiser(this->adv_id_);
     }
   }
 }

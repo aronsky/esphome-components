@@ -6,6 +6,10 @@ namespace bleadvcontroller {
 
 static const char *TAG = "ble_adv_light";
 
+float ensure_range(float f) {
+  return (f > 1.0) ? 1.0 : ( (f < 0.0) ? 0.0 : f );
+}
+
 light::LightTraits BleAdvLight::get_traits() {
   auto traits = light::LightTraits();
 
@@ -22,7 +26,6 @@ void BleAdvLight::dump_config() {
   ESP_LOGCONFIG(TAG, "  Base Light '%s'", this->state_->get_name().c_str());
   ESP_LOGCONFIG(TAG, "  Cold White Temperature: %f mireds", this->cold_white_temperature_);
   ESP_LOGCONFIG(TAG, "  Warm White Temperature: %f mireds", this->warm_white_temperature_);
-  ESP_LOGCONFIG(TAG, "  Constant Brightness: %s", this->constant_brightness_ ? "true" : "false");
   ESP_LOGCONFIG(TAG, "  Minimum Brightness: 0x%.2X", this->min_brightness_);
 }
 
@@ -42,45 +45,33 @@ void BleAdvLight::write_state(light::LightState *state) {
     this->is_off_ = false;
   }
 
-  // Correct Brightness to avoid going under min_brightness defined
-  // from 0 -> 1 to min_brigthness -> 1
-  float eff_bri = this->min_brightness_ + state->current_values.get_brightness() * (1.f - this->min_brightness_);
-  ESP_LOGD(TAG, "Corrected brightness: %.0f%%", eff_bri*100.f);
-  state->current_values.set_brightness(eff_bri);
+  // Compute Corrected Brigtness / Warm Color Temperature (potentially reversed) as uint8_t: 0 -> 255
+  uint8_t updated_br = 255 * ensure_range(this->min_brightness_ + state->current_values.get_brightness() * (1.f - this->min_brightness_));
+  uint8_t updated_ct = 255 * ensure_range((state->current_values.get_color_temperature() - this->cold_white_temperature_) / (this->warm_white_temperature_ - this->cold_white_temperature_));
+  updated_ct = this->get_parent()->is_reversed() ? 255 - updated_ct : updated_ct;
 
-  // Check if Brigtness / Color Temperature was modified
-  bool br_modified = this->brightness_ != state->current_values.get_brightness();
-  bool ct_modified = this->color_temperature_ != state->current_values.get_color_temperature();
-  if (!br_modified && !ct_modified) {
+  // During transition(current / remote states are the same), do not process change 
+  //    if Brigtness / Color Temperature was not modified enough
+  bool br_modified = abs(this->brightness_ - updated_br) > 5;
+  bool ct_modified = abs(this->warm_color_ - updated_ct) > 5;
+  if (!br_modified && !ct_modified && (state->current_values != state->remote_values)) {
     return;
   }
   
-  this->brightness_ = state->current_values.get_brightness();
-  this->color_temperature_ = state->current_values.get_color_temperature();
+  this->brightness_ = updated_br;
+  this->warm_color_ = updated_ct;
+  ESP_LOGD(TAG, "Cold: %d, Warm: %d, Brightness: %d", 255 - updated_ct, updated_ct, updated_br);
 
   if(this->get_parent()->is_supported(CommandType::LIGHT_WCOLOR)) {
-    float cwf, wwf;
-    state->current_values_as_cwww(&cwf, &wwf, this->constant_brightness_);
-    // convert cold and warm from 0 -> 1 to 0 -> 255
-    uint8_t cwi = (uint8_t)(0xff * cwf);
-    uint8_t wwi = (uint8_t)(0xff * wwf);
-    ESP_LOGD(TAG, "BleAdvLight::write_state - Requested cold: %d, warm: %d", cwi, wwi);
-    this->command(CommandType::LIGHT_WCOLOR, cwi, wwi);
+    this->command(CommandType::LIGHT_WCOLOR, updated_ct, updated_br);
   } else {
-    ESP_LOGD(TAG, "ct: %.3f, br: %.3f", this->color_temperature_, this->brightness_);
-    // convert color temp from cold_color -> warm_color to 0 -> 255 and brigtness from 0 -> 1 to 0 -> 255
-    uint8_t cti = (uint8_t)(0xff * (this->color_temperature_ - this->cold_white_temperature_) / (this->warm_white_temperature_ - this->cold_white_temperature_));
-    uint8_t bri = (uint8_t)(0xff * this->brightness_);
     if (ct_modified) {
-      ESP_LOGD(TAG, "BleAdvLight::write_state - Requested color temperature: %d", cti);
-      this->command(CommandType::LIGHT_CCT, cti);
+      this->command(CommandType::LIGHT_CCT, updated_ct);
     }
     if (br_modified || (this->brightness_after_color_change_ && ct_modified)) {
-      ESP_LOGD(TAG, "BleAdvLight::write_state - Requested brightness: %d", bri);
-      this->command(CommandType::LIGHT_DIM, bri);
+      this->command(CommandType::LIGHT_DIM, updated_br);
     }
   }
-
 }
 
 /*********************

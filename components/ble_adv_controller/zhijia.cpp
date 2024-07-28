@@ -526,12 +526,12 @@ void stage3(unsigned char *buffer, size_t length, unsigned char *dest) {
 END OF MSC26A encoder
 **********************/
 
-bool ZhijiaController::is_supported(const Command &cmd) {
+bool ZhijiaEncoder::is_supported(const Command &cmd) {
   ZhijiaArgs_t cmd_real = translate_cmd(cmd);
   return (cmd_real.cmd_ != 0);
 }
 
-ZhijiaArgs_t ZhijiaController::translate_cmd(const Command &cmd) {
+ZhijiaArgs_t ZhijiaEncoder::translate_cmd(const Command &cmd) {
   ZhijiaArgs_t cmd_real;
   bool isV0 = (this->variant_ == VARIANT_V0);
   bool isV2 = (this->variant_ == VARIANT_V2);
@@ -573,12 +573,12 @@ ZhijiaArgs_t ZhijiaController::translate_cmd(const Command &cmd) {
         cmd_real.cmd_ = 0xB7; // -73
         // app software: int i in between 0 -> 1023
         // (byte) ((0xFF0000 & i) >> 16), (byte) ((0x00FF00 & i) >> 8), (byte) (i & 0x0000FF)
-        uint16_t argBy4 = this->reversed_ ? 1020 - (4 * (uint16_t)cmd.args_[0]) : 4 * (uint16_t)cmd.args_[0]; 
+        uint16_t argBy4 = 4 * (uint16_t)cmd.args_[0]; 
         cmd_real.args_[1] = ((argBy4 & 0xFF00) >> 8);
         cmd_real.args_[2] = (argBy4 & 0x00FF);
       } else {
         cmd_real.cmd_ = 0xAE; // -82
-        cmd_real.args_[0] = this->reversed_ ? 255 - cmd.args_[0] : cmd.args_[0];
+        cmd_real.args_[0] = cmd.args_[0];
       }
       break;
     case CommandType::LIGHT_SEC_ON:
@@ -641,31 +641,51 @@ ZhijiaArgs_t ZhijiaController::translate_cmd(const Command &cmd) {
     }
 */
 
-void ZhijiaController::get_adv_data(uint8_t * buf, Command &cmd) {
+uint8_t ZhijiaEncoder::get_adv_data(std::vector< BleAdvParam > & params, Command &cmd) {
+  params.emplace_back();
+  BleAdvParam & param = params.back();
+
   ZhijiaArgs_t cmd_real = this->translate_cmd(cmd);
+
   unsigned char uuid[3] = {0};
   uuid[0] = (cmd.id_ & 0xFF0000) >> 16;
   uuid[1] = (cmd.id_ & 0x00FF00) >> 8;
   uuid[2] = (cmd.id_ & 0x0000FF);
-  ESP_LOGD(TAG, "UUID: '0x%02X%02X%02X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d]", uuid[0], uuid[1], uuid[2], 
-           cmd.tx_count_, cmd_real.cmd_, cmd_real.args_[0], cmd_real.args_[1], cmd_real.args_[2]);
+  ESP_LOGD(TAG, "%s - UUID: '0x%02X%02X%02X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d]", this->id_.c_str(), 
+      uuid[0], uuid[1], uuid[2], cmd.tx_count_, cmd_real.cmd_, cmd_real.args_[0], cmd_real.args_[1], cmd_real.args_[2]);
   switch(this->variant_)
   {
     case VARIANT_V0:
-      msc16_msc26::aes16Encrypt16(MAC, uuid, 0xFF, cmd_real.cmd_, cmd.tx_count_, cmd_real.args_, buf);
+      msc16_msc26::aes16Encrypt16(MAC, uuid, 0xFF, cmd_real.cmd_, cmd.tx_count_, cmd_real.args_, param.buf_);
+      param.len_ = 16;
       break;
     case VARIANT_V1:
-      msc16_msc26::aes26Encrypt(MAC, uuid, MAC, 0x7F, cmd_real.cmd_, cmd.tx_count_, cmd_real.args_, buf);
+      msc16_msc26::aes26Encrypt(MAC, uuid, MAC, 0x7F, cmd_real.cmd_, cmd.tx_count_, cmd_real.args_, param.buf_);
       break;
     case VARIANT_V2:
-      msc26a::stage1(cmd_real.args_, cmd_real.cmd_, cmd.tx_count_, 0x7F, MAC, uuid, buf);
-      msc26a::stage2(buf, 0x18, 0x2);
-      msc26a::stage3(buf, 0x1a, buf);
+      msc26a::stage1(cmd_real.args_, cmd_real.cmd_, cmd.tx_count_, 0x7F, MAC, uuid, param.buf_);
+      msc26a::stage2(param.buf_, 0x18, 0x2);
+      msc26a::stage3(param.buf_, 0x1a, param.buf_);
       break;
     default:
       ESP_LOGW(TAG, "get_adv_data called with invalid variant %d", this->variant_);
       break;
   }
+  return 1;
+}
+
+void ZhijiaEncoder::register_encoders(BleAdvHandler * handler, const std::string & encoding) {
+  BleAdvMultiEncoder * zhijia_all = new BleAdvMultiEncoder("Zhi Jia - All", encoding);
+  handler->add_encoder(zhijia_all);
+  BleAdvEncoder * zhijia_v0 = new ZhijiaEncoder("Zhi Jia - v0", encoding, ZhijiaVariant::VARIANT_V0);
+  handler->add_encoder(zhijia_v0);
+  zhijia_all->add_encoder(zhijia_v0);
+  BleAdvEncoder * zhijia_v1 = new ZhijiaEncoder("Zhi Jia - v1", encoding, ZhijiaVariant::VARIANT_V1);
+  handler->add_encoder(zhijia_v1);
+  zhijia_all->add_encoder(zhijia_v1);
+  BleAdvEncoder * zhijia_v2 = new ZhijiaEncoder("Zhi Jia - v2", encoding, ZhijiaVariant::VARIANT_V2);
+  handler->add_encoder(zhijia_v2);
+  zhijia_all->add_encoder(zhijia_v2);
 }
 
 } // namespace bleadvcontroller

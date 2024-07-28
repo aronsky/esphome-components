@@ -6,64 +6,57 @@
 #ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
 #endif
-#include <esp_gap_ble_api.h>
+#include "esphome/components/select/select.h"
+#include "ble_adv_handler.h"
 #include <vector>
-#include <queue>
+#include <list>
 
 namespace esphome {
 namespace bleadvcontroller {
 
-enum CommandType {
-  NOCMD = 0,
-  PAIR = 1,
-  UNPAIR = 2,
-  CUSTOM = 3,
-  LIGHT_ON = 13,
-  LIGHT_OFF = 14,
-  LIGHT_DIM = 15,
-  LIGHT_CCT = 16,
-  LIGHT_WCOLOR = 17,
-  LIGHT_SEC_ON = 18,
-  LIGHT_SEC_OFF = 19,
-  FAN_ON = 30,
-  FAN_OFF = 31,
-  FAN_SPEED = 32,
-  FAN_ONOFF_SPEED = 33,
-  FAN_DIR = 34,
-  FAN_OSC = 35,
-};
-
-class Command
+/**
+  BleAdvSelect: basic implementation of 'Select' to handle configuration choice from HA directly
+ */
+class BleAdvSelect : public select::Select
 {
 public:
-  Command(CommandType cmd): cmd_(cmd) {}
+  void control(const std::string &value) override { this->publish_state(value); }
+  void set_id(const char * name, const StringRef & parent_name);
 
-  CommandType cmd_;
-  std::vector<uint8_t> args_{0,0,0,0,0};
-
-  // Attributes from entity
-  uint8_t index_ = 0;
-  uint16_t type_ = 0x0100;
-
-  // Attributes from controller
-  uint32_t id_ = 0;
-  uint8_t tx_count_ = 0;
+protected:
+  std::string ref_name_;
 };
 
+/**
+  BleAdvController:
+    One physical device controlled == One Controller.
+    Referenced by Entities as their parent to perform commands.
+    Chooses which encoder(s) to be used to issue a command
+    Interacts with the BleAdvHandler for Queue processing
+ */
 class BleAdvController : public Component, public EntityBase
 #ifdef USE_API
   , public api::CustomAPIDevice
 #endif
 {
- public:
+public:
   void setup() override;
   void loop() override;
   virtual void dump_config() override;
   
-  void set_tx_duration(uint32_t tx_duration) { this->tx_duration_ = tx_duration; }
+  void set_min_tx_duration(uint32_t tx_duration) { this->min_tx_duration_ = tx_duration; }
+  void set_max_tx_duration(uint32_t tx_duration) { this->max_tx_duration_ = tx_duration; }
+  void set_seq_duration(uint32_t seq_duration) { this->seq_duration_ = seq_duration; }
   void set_forced_id(uint32_t forced_id) { this->forced_id_ = forced_id; }
-  void set_variant(uint8_t variant) { this->variant_ = variant; }
+  void set_forced_id(const std::string & str_id) { this->forced_id_ = fnv1_hash(str_id); }
+  void set_encoding_and_variant(const std::string & encoding, uint8_t variant);
+  select::Select * get_select_encoding() { return &(this->select_encoding_); }
   void set_reversed(bool reversed) { this->reversed_ = reversed; }
+  bool is_reversed() const { return this->reversed_; }
+  bool is_supported(const Command &cmd) { return this->get_encoder().is_supported(cmd); }
+
+  void set_handler(BleAdvHandler * handler) { this->handler_ = handler; }
+  BleAdvEncoder & get_encoder() { return this->handler_->get_encoder(this->select_encoding_.state); }
 
 #ifdef USE_API
   // Services
@@ -74,56 +67,40 @@ class BleAdvController : public Component, public EntityBase
 
   bool enqueue(Command &cmd);
 
-  // supported commands
-  virtual bool is_supported(const Command &cmd) = 0;
+protected:
 
-  // encoding data by dedicated encoder
-  virtual void get_adv_data(uint8_t * buf, Command &cmd) = 0;
+  uint32_t min_tx_duration_ = 250;
+  uint32_t max_tx_duration_ = 3000;
+  uint32_t seq_duration_ = 150;
 
- protected:
-
-  uint32_t tx_duration_;
   uint32_t forced_id_ = 0;
-  uint8_t variant_;
   bool reversed_;
 
-  std::queue<uint8_t *> commands_;
+  BleAdvSelect select_encoding_;
+  BleAdvHandler * handler_{nullptr};
+
+  class QueueItem {
+  public:
+    QueueItem(CommandType cmd_type): cmd_type_(cmd_type) {}
+    CommandType cmd_type_;
+    std::vector< BleAdvParam > params_;
+  
+    // Only move operators to avoid data copy
+    QueueItem(QueueItem&&) = default;
+    QueueItem& operator=(QueueItem&&) = default;
+  };
+  std::list< QueueItem > commands_;
 
   // Being advertised data properties
   uint8_t tx_count_ = 0;
   uint32_t adv_start_time_ = 0;
-
-  // non static to allow customization by child if needed
-  esp_ble_adv_data_t adv_data_ = {
-    .set_scan_rsp = false,
-    .include_name = false,
-    .include_txpower = false,
-    .min_interval = 0x0001,
-    .max_interval = 0x0004,
-    .appearance = 0x00,
-    .manufacturer_len = 0,
-    .p_manufacturer_data = nullptr,
-    .service_data_len = 0,
-    .p_service_data = nullptr,
-    .service_uuid_len = 0,
-    .p_service_uuid = nullptr,
-    .flag = (ESP_BLE_ADV_FLAG_LIMIT_DISC | ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_DMT_CONTROLLER_SPT),
-  };
-
-  // non static to allow customization by child if needed
-  esp_ble_adv_params_t adv_params_ = {
-    .adv_int_min = 0x20,
-    .adv_int_max = 0x20,
-    .adv_type = ADV_TYPE_NONCONN_IND,
-    .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
-    .peer_addr = { 0x00 },
-    .peer_addr_type = BLE_ADDR_TYPE_PUBLIC,
-    .channel_map = ADV_CHNL_ALL,
-    .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
-  };
-
+  uint16_t adv_id_ = 0;
 };
 
+/**
+  BleAdvEntity: 
+    Base class for implementation of Entities, referencing the parent BleAdvController
+ */
 class BleAdvEntity: public Component, public Parented < BleAdvController >
 {
   public:
