@@ -27,19 +27,15 @@ The technical solution implemented by manufacturers to control those devices is 
 ## How to try it
 
 1. As a preliminary step, be sure to be able to create a base ESPHome configuration from the ESPHome Dashboard, install it to your ESP32, have it available in Home Assistant and be able to access the logs (needed in case of issue). This is a big step if you are new to ESPHome but on top of [ESPHome doc](https://esphome.io/guides/getting_started_hassio.html) you will find tons of tutorial on the net for that.
-2. Add to your up and running ESPHome configuration the reference to this repo ([ESPHome external component](https://esphome.io/components/external_components.html))
-3. Add a lamp controller `ble_adv_controller` specifying:
+2. Add to your up and running ESPHome configuration the reference to this repo using ([ESPHome external component](https://esphome.io/components/external_components.html))
+3. Add a lamp controller `ble_adv_controller` specifying (see example configuration):
    * its `id` to be referenced by entities it controls. The `id` is also the reference used to pair with the device: if it is changed the device needs to be re-paired with the new `id`.
    * its `encoding`, this is fully known from the phone controlling app, see the possible values in the examples below.
    * its `variant`, this is the version of the encoding. Keep the default value (last version) as a first step, this will probably be the good one if your light is recent.
 4. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform
 5. Add a `pair` configuration button to ease the pairing action from HA
 6. Install and flash the ESP32 device
-7. If you are not sure of the Variant to use to Pair the device, you can use the dynamic configuration of the encoding in Home Assistant (in the configuration part near the Pair Button) to select the "FanLamp - All" or "Zhi Jia - All" in order to use the multi advertising with all known variants for the app.
-8. Use the newly created button in Home Assistant to pair with your light (press the button withing 5 seconds of powering the lamp with a switch, the same way you would have done with the phone app). If you selected the "All" configuration, the pairing should work!.
-9. Try to switch ON / OFF your light, it will work if the pairing worked
-10. If you keep this "All" encoding, it will work, but it is sub optimal as the component will send 3 or 4 messages for each command, which will make it very slow... Just change the encoding to one of the variant and re try to switch your light ON/OFF: if it works you have the good variant! If not just try the next one, you should be able to find the relevant one in a few seconds :smile:
-11. Once you have found your `variant`, reference it in your config and re-flash to have it as default value, else the config will be lost on restart
+7. Find the relevant `variant` and `duration` corresponding to your device thanks to [Dynamic configuration](#dynamic-configuration)
 8. Enjoy controlling your BLE light with Home Assistant!
 
 ## Known issues and not implemented or tested features
@@ -79,14 +75,15 @@ ble_adv_controller:
     # For ZhiJia: Can be v0 (MSC16), v1 (MSC26) or v2 (MSC26A), default is v2
     # For Fanlamp: Can be any of 'v1a', 'v1b', 'v2' or 'v3', depending on how old your lamp is... Default is 'v3'
     variant: v3
-    # max_duration (default 3000): the maximum duration during which the command is advertized.
+    # max_duration (default 3000, range 300 -> 10000): the maximum duration during which the command is advertized.
     # if a command is received before the 'max_duration' but after the 'duration', it is processed immediately 
-    # Increasing this parameter will make the combination of commands slower
+    # Increasing this parameter will have no major consequences, the component will just keep advertize the command
+    # Could be interesting at pairing time to have the pairing command advertized for a long time
     max_duration: 3000
-    # duration (default 200): the MINIMUM duration during which the command is sent.
+    # duration (default 200, range 100 -> 500): the MINIMUM duration during which the command is sent.
     # if a command is received before the 'duration' it is queued and processed later, 
     # if there is already a similar command pending, in this case the pending command is removed from the queue
-    # Increasing this parameter will make the combination of commands slower
+    # Increasing this parameter will make the combination of commands slower. See 'Dynamic Configuration'.
     duration: 200
     # reversed: reversing the cold / warm at encoding time, needed for some controllers
     # default to false
@@ -97,6 +94,8 @@ ble_adv_controller:
     # For ZhiJia, default to 0xC630B8 which was the value hard-coded in ble_adv_light component. Max 0xFFFFFF.
     # For FanLamp: default to 0, uses the hash id computed by esphome from the id/name of the controller
     forced_id: 0
+    # show_config (default true): shows the dynamic configuration in the device info page in Home Automation
+    show_config: true
 
 light:
   - platform: ble_adv_controller
@@ -133,7 +132,7 @@ fan:
     use_direction: true
     # use_oscillation: ability to start / stop the fan oscillation.
     # default to false, only available for FanLamp v2 / v3
-    use_direction: false
+    use_oscillation: false
 
 button:
   - platform: ble_adv_controller
@@ -145,6 +144,20 @@ button:
 ```
 
 ## Good to know
+
+### Dynamic configuration
+It could be painful to find the correct variant or the correct duration by each time modifying the option in the yaml configuration of esphome. In order to help a dynamic configuration is available in Home Assistant 'Configuration' part of the esphome device:
+
+![choice encoding](../../doc/images/Choice_encoding.jpg)
+
+* `Variant` is customizable in the encoding selection part, the idea is to do the following:
+  * Start with the 'Zhi Jia - All' or 'FanLamp -All' depending on the corresponding phone app, and perform the Pairing with this: the component will send the pairing message with all variants, as the phone app is doing. If you need the pairing to be kept emited for a long time, increase the 'max_duration' option.
+  * Once done you can test to switch ON / OFF the main light to check the pairing went OK
+  * Then you can try the variants one by one and switch ON / OFF to find the exact variant used by your lamp
+
+* `Duration` is customizable, the lowest the better it makes the device answer faster. It is recommended to try to switch very fast ON/OFF the main light several times: If you end up with wrong state (light ON whereas HA state is OFF, or the reverse) it means the duration is too low and needs to be increased.
+
+Once you managed to define the relevant values (without the need to re flash each time!), you can save the values in the yaml config, and even hide the dynamic configuration with the option `show_config: false`
 
 ### Reverse Cold / Warm
 If this component works, but the cold and warm temperatures are reversed (that is, setting the temperature in Home Assistant to warm results in cold/blue light, and setting it to cold results in warm/yellow light), add a `reversed: true` line to your `ble_adv_controller` config.

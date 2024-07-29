@@ -9,7 +9,14 @@ static const char *TAG = "ble_adv_controller";
 
 void BleAdvSelect::set_id(const char * name, const StringRef & parent_name) {
   // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
-  this->ref_name_ = std::string(name) + " - " + std::string(parent_name);
+  this->ref_name_ = std::string(parent_name) + " - " + std::string(name);
+  this->set_object_id(this->ref_name_.c_str());
+  this->set_name(this->ref_name_.c_str());
+}
+
+void BleAdvNumber::set_id(const char * name, const StringRef & parent_name) {
+  // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
+  this->ref_name_ = std::string(parent_name) + " - " + std::string(name);
   this->set_object_id(this->ref_name_.c_str());
   this->set_name(this->ref_name_.c_str());
 }
@@ -23,20 +30,31 @@ void BleAdvController::setup() {
 #ifdef USE_API
   register_service(&BleAdvController::on_pair, "pair_" + this->get_object_id());
   register_service(&BleAdvController::on_unpair, "unpair_" + this->get_object_id());
-  register_service(&BleAdvController::on_cmd, "cmd_" + this->get_object_id(), {"type", "index", "cmd", "arg0", "arg1", "arg2", "arg3"});
+  register_service(&BleAdvController::on_cmd, "cmd_" + this->get_object_id(), {"cmd", "arg0", "arg1", "arg2", "arg3"});
 #endif
-  // init select for encoding
-  this->select_encoding_.set_id("Encoding", this->get_name());
-  this->select_encoding_.set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
-  this->select_encoding_.publish_state(this->select_encoding_.state);
+  if (this->show_config_) {
+    // init select for encoding
+    this->select_encoding_.set_id("Encoding", this->get_name());
+    this->select_encoding_.set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+    this->select_encoding_.publish_state(this->select_encoding_.state);
+
+    // init number for duration
+    this->number_duration_.set_id("Duration", this->get_name());
+    this->number_duration_.set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+    this->number_duration_.traits.set_min_value(100);
+    this->number_duration_.traits.set_max_value(500);
+    this->number_duration_.traits.set_step(10);
+    this->number_duration_.publish_state(this->number_duration_.state);
+  }
 }
 
 void BleAdvController::dump_config() {
   ESP_LOGCONFIG(TAG, "BleAdvController '%s'", this->get_object_id().c_str());
   ESP_LOGCONFIG(TAG, "  Hash ID '%X'", this->forced_id_);
-  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %d ms", this->min_tx_duration_);
+  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %d ms", this->number_duration_.state);
   ESP_LOGCONFIG(TAG, "  Transmission Max Duration: %d ms", this->max_tx_duration_);
   ESP_LOGCONFIG(TAG, "  Transmission Sequencing Duration: %d ms", this->seq_duration_);
+  ESP_LOGCONFIG(TAG, "  Configuration visible: %s", this->show_config_ ? "YES" : "NO");
 }
 
 #ifdef USE_API
@@ -50,10 +68,8 @@ void BleAdvController::on_unpair() {
   this->enqueue(cmd);
 }
 
-void BleAdvController::on_cmd(int type, int index, int cmd_type, int arg0, int arg1, int arg2, int arg3) {
+void BleAdvController::on_cmd(int cmd_type, int arg0, int arg1, int arg2, int arg3) {
   Command cmd(CommandType::CUSTOM);
-  cmd.type_ = type;
-  cmd.index_ = index;
   cmd.args_[0] = cmd_type;
   cmd.args_[1] = arg0;
   cmd.args_[2] = arg1;
@@ -95,9 +111,9 @@ bool BleAdvController::enqueue(Command &cmd) {
   }
 
   // setup seq duration for each packet
-  bool use_seq_duration = (this->seq_duration_ > 0) && (this->seq_duration_ < this->min_tx_duration_);
+  bool use_seq_duration = (this->seq_duration_ > 0) && (this->seq_duration_ < this->number_duration_.state);
   for (auto & param : this->commands_.back().params_) {
-    param.duration_ = use_seq_duration ? this->seq_duration_: this->min_tx_duration_;
+    param.duration_ = use_seq_duration ? this->seq_duration_: this->number_duration_.state;
   }
   
   return true;
@@ -120,7 +136,7 @@ void BleAdvController::loop() {
   }
   else {
     // command is being advertised by this controller, check if stop and clean-up needed
-    uint32_t duration = this->commands_.empty() ? this->max_tx_duration_ : this->min_tx_duration_;
+    uint32_t duration = this->commands_.empty() ? this->max_tx_duration_ : this->number_duration_.state;
     if (now > this->adv_start_time_ + duration) {
       this->adv_start_time_ = 0;
       ESP_LOGD(TAG, "%s - request stop advertising", this->get_object_id().c_str());

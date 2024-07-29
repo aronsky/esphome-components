@@ -18,9 +18,10 @@ from .const import (
     CONF_BLE_ADV_FORCED_ID,
     CONF_BLE_ADV_MAX_DURATION,
     CONF_BLE_ADV_SEQ_DURATION,
+    CONF_BLE_ADV_SHOW_CONFIG,
 )
 
-AUTO_LOAD = ["esp32_ble", "select"]
+AUTO_LOAD = ["esp32_ble", "select", "number"]
 DEPENDENCIES = ["esp32"]
 MULTI_CONF = True
 
@@ -72,6 +73,7 @@ CONTROLLER_BASE_CONFIG = cv.ENTITY_BASE_SCHEMA.extend(
         cv.Optional(CONF_BLE_ADV_MAX_DURATION, default=3000): cv.All(cv.positive_int, cv.Range(min=300, max=10000)),
         cv.Optional(CONF_BLE_ADV_SEQ_DURATION, default=50): cv.All(cv.positive_int, cv.Range(min=0, max=150)),
         cv.Optional(CONF_REVERSED, default=False): cv.boolean,
+        cv.Optional(CONF_BLE_ADV_SHOW_CONFIG, default=True): cv.boolean,
     }
 )
 
@@ -132,7 +134,10 @@ async def to_code(config):
         cg.add(var.set_forced_id(config[CONF_BLE_ADV_FORCED_ID]))
     else:
         cg.add(var.set_forced_id(config[CONF_ID].id))
-    cg.add(cg.App.register_select(var.get_select_encoding()))
+    cg.add(var.set_show_config(config[CONF_BLE_ADV_SHOW_CONFIG]))
+    if config[CONF_BLE_ADV_SHOW_CONFIG]:
+        cg.add(cg.App.register_select(var.get_select_encoding()))
+        cg.add(cg.App.register_number(var.get_number_duration()))
     
 
 

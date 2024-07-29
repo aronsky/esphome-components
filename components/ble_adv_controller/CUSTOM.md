@@ -54,9 +54,9 @@ if you are using 'api' component to communicate with HA, for each ble_adv_contro
 ```
 esphome: <device_name>_cmd_<ble_adv_controller_id>
 ```
-![screenshot](../../docs/images/BleAdvService.jpg)
+![screenshot](../../doc/images/BleAdvService.jpg)
 
-It uses as a bases the ble_adv_controller, and then its associated parameters and features (encoding, variant, identifier, transaction count). It allows to specify directly command parameters (type, index, cmd, arg0..3) skipping the 'Convert' part and processing the encoding from there (add controller params, Signing, CRC, Whitening and emitting command).
+It uses as a bases the ble_adv_controller, and then its associated parameters and features (encoding, variant, identifier, transaction count). It allows to specify directly command parameters (cmd, arg0..3) skipping the 'Convert' part and processing the encoding from there (add controller params, Signing, CRC, Whitening and emitting command).
 
 ## Known commands
 For info here are the "known" commands already extracted from code and their corresponding command id and parameter values when known, for each main encoding sets:
@@ -157,7 +157,7 @@ Example custom commands:
   ```
   => there is a different cmd code for each speed, args are not used .........
   => cmd = 256 + (-34) = 222, in fact 256 + (-37) + speed_level
-  * custom command parameters: {type: 0, index: 0, cmd: 222, arg0: 0, arg1: 0, arg2: 0, arg3: 0}
+  * custom command parameters: {cmd: 222, arg0: 0, arg1: 0, arg2: 0, arg3: 0}
 
 
 ### FanLamp v1 (v1a and v1b)
@@ -195,7 +195,7 @@ Example custom commands:
         startSendData(getMessage(50, LampData.mMasterControlAddr, i, i2, 6, LampConfig.UNK1, i3));
     }
   ```
-  * custom command parameters: {type: 0, index: 0, cmd: 50, arg0: 5, arg1: 6, arg2: 0, arg3: 0}.
+  * custom command parameters: {cmd: 50, arg0: 5, arg1: 6, arg2: 0, arg3: 0}.
 
 Note that the Fan Gear command is the same as Fan Level but it gives 6 levels instead of 3. Depend on the device to be controlled.
 
@@ -228,6 +228,6 @@ Example custom commands:
     ...
   }  
   ```
-  * custom command parameters: {type: 0, index: 0, cmd: 49, arg0: 0, arg1: 32, arg2: 3, arg3: 0}
+  * custom command parameters: {cmd: 49, arg0: 0, arg1: 32, arg2: 3, arg3: 0}
 
 Note that arg1 should take the 'generic_flag' value, but no idea how to build this one, this is where the '**guess**' happens: after 31 unsuccessful tries, the 32nd worked!

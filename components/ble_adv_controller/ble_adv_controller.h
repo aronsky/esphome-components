@@ -7,6 +7,7 @@
 #include "esphome/components/api/custom_api_device.h"
 #endif
 #include "esphome/components/select/select.h"
+#include "esphome/components/number/number.h"
 #include "ble_adv_handler.h"
 #include <vector>
 #include <list>
@@ -21,6 +22,19 @@ class BleAdvSelect : public select::Select
 {
 public:
   void control(const std::string &value) override { this->publish_state(value); }
+  void set_id(const char * name, const StringRef & parent_name);
+
+protected:
+  std::string ref_name_;
+};
+
+/**
+  BleAdvNumber: basic implementation of 'Number' to handle duration(s) choice from HA directly
+ */
+class BleAdvNumber : public number::Number
+{
+public:
+  void control(float value) override { this->publish_state(value); }
   void set_id(const char * name, const StringRef & parent_name);
 
 protected:
@@ -44,16 +58,18 @@ public:
   void loop() override;
   virtual void dump_config() override;
   
-  void set_min_tx_duration(uint32_t tx_duration) { this->min_tx_duration_ = tx_duration; }
+  void set_min_tx_duration(uint32_t tx_duration) { this->number_duration_.state = tx_duration; }
   void set_max_tx_duration(uint32_t tx_duration) { this->max_tx_duration_ = tx_duration; }
   void set_seq_duration(uint32_t seq_duration) { this->seq_duration_ = seq_duration; }
   void set_forced_id(uint32_t forced_id) { this->forced_id_ = forced_id; }
   void set_forced_id(const std::string & str_id) { this->forced_id_ = fnv1_hash(str_id); }
   void set_encoding_and_variant(const std::string & encoding, uint8_t variant);
   select::Select * get_select_encoding() { return &(this->select_encoding_); }
+  number::Number * get_number_duration() { return &(this->number_duration_); }
   void set_reversed(bool reversed) { this->reversed_ = reversed; }
   bool is_reversed() const { return this->reversed_; }
   bool is_supported(const Command &cmd) { return this->get_encoder().is_supported(cmd); }
+  void set_show_config(bool show_config) { this->show_config_ = show_config; }
 
   void set_handler(BleAdvHandler * handler) { this->handler_ = handler; }
   BleAdvEncoder & get_encoder() { return this->handler_->get_encoder(this->select_encoding_.state); }
@@ -62,21 +78,22 @@ public:
   // Services
   void on_pair();
   void on_unpair();
-  void on_cmd(int type, int index, int cmd, int arg0, int arg1, int arg2, int arg3);
+  void on_cmd(int cmd, int arg0, int arg1, int arg2, int arg3);
 #endif
 
   bool enqueue(Command &cmd);
 
 protected:
 
-  uint32_t min_tx_duration_ = 250;
   uint32_t max_tx_duration_ = 3000;
   uint32_t seq_duration_ = 150;
 
   uint32_t forced_id_ = 0;
   bool reversed_;
 
+  bool show_config_{false};
   BleAdvSelect select_encoding_;
+  BleAdvNumber number_duration_;
   BleAdvHandler * handler_{nullptr};
 
   class QueueItem {
