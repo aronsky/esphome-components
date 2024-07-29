@@ -19,9 +19,11 @@ CONF_BLE_ADV_COMMANDS = {
   "fan_speed" : {CONF_BLE_ADV_CMD: 32, CONF_BLE_ADV_NB_ARGS : 1},
   "fan_onoff_speed" : {CONF_BLE_ADV_CMD: 33, CONF_BLE_ADV_NB_ARGS : 2},
   "fan_dir" : {CONF_BLE_ADV_CMD: 34, CONF_BLE_ADV_NB_ARGS : 1},
+  "fan_osc" : {CONF_BLE_ADV_CMD: 35, CONF_BLE_ADV_NB_ARGS : 1},
 }
 CONF_BLE_ADV_SPEED_COUNT = "speed_count"
 CONF_BLE_ADV_DIRECTION_SUPPORTED = "use_direction"
+CONF_BLE_ADV_OSCILLATION_SUPPORTED = "use_oscillation"
 CONF_BLE_ADV_FORCED_ID = "forced_id"
 CONF_BLE_ADV_SECONDARY = "secondary"
 CONF_BRIGHTNESS_AFTER_COLOR_CHANGE = "send_brightness_after_color_temperature_change"

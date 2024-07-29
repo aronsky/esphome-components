@@ -13,7 +13,7 @@ fan::FanTraits BleAdvFan::get_traits() {
   traits.set_direction(this->use_direction_);
   traits.set_speed(this->speed_count_ > 0);
   traits.set_supported_speed_count(this->speed_count_);
-  traits.set_oscillation(false);
+  traits.set_oscillation(this->use_oscillation_);
 
   return traits;
 }
@@ -62,6 +62,13 @@ void BleAdvFan::control(const fan::FanCall &call) {
     bool isFwd = this->direction == fan::FanDirection::FORWARD;
     ESP_LOGD(TAG, "BleAdvFan::control - Setting direction %s", (isFwd ? "fwd":"rev"));
     this->command(CommandType::FAN_DIR, isFwd);
+  }
+
+  if (call.get_oscillating().has_value()) {
+    // Switch Oscillation
+    this->oscillating = *call.get_oscillating();
+    ESP_LOGD(TAG, "BleAdvFan::control - Setting Oscillation %s", (this->oscillating ? "ON":"OFF"));
+    this->command(CommandType::FAN_OSC, this->oscillating);
   }
 
   this->publish_state();

@@ -194,6 +194,12 @@ FanLampArgs FanLampController::translate_cmd(const Command &cmd) {
         cmd_real.args_[0] = !cmd.args_[0];
       }
       break;
+    case CommandType::FAN_OSC:
+      if(isV2) {
+        cmd_real.cmd_ = 0x16;
+        cmd_real.args_[1] = cmd.args_[0];
+      }
+      break;
     case CommandType::NOCMD:
     default:
       break;

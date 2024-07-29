@@ -122,6 +122,9 @@ fan:
     # use_direction: ability to change the fan direction forward / reverse.
     # default to true, not available for zhijia
     use_direction: true
+    # use_oscillation: ability to start / stop the fan oscillation.
+    # default to false, only available for FanLamp v2 / v3
+    use_direction: false
 
 button:
   - platform: ble_adv_controller
@@ -132,11 +135,47 @@ button:
     cmd: pair
 ```
 
-## Potentially fixable issues
+## Good to know
 
+### Reverse Cold / Warm
 If this component works, but the cold and warm temperatures are reversed (that is, setting the temperature in Home Assistant to warm results in cold/blue light, and setting it to cold results in warm/yellow light), add a `reversed: true` line to your `ble_adv_controller` config.
 
+### Minimum Brightness
 If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a percentage).
+
+### Action on turn on/off
+Some devices perform some automatic actions when the main light or the fan are switched off, as for instance switch off the secondary light, or reset the Fan Direction or Oscillation status.
+In order to update the state the same way in Home Assistant, simply add an [automation](https://esphome.io/components/light/index.html#light-on-turn-on-off-trigger) in your config, for instance:
+* Switch Off the secondary light at the same time than the main light:
+```yaml
+light:
+  - platform: ble_adv_controller
+      ble_adv_controller_id: my_controller
+      name: Main Light
+      on_turn_off:
+        then:
+          light.turn_off: secondary_light
+    - platform: ble_adv_controller
+      ble_adv_controller_id:my_controller
+      id: secondary_light
+      name: Secondary Light
+      secondary: true
+```
+* Reset Fan Direction and Oscillation at Fan turn_on:
+```yaml
+fan:
+  - platform: ble_adv_controller
+      ble_adv_controller_id: my_controller
+      id: my_fan
+      name: My Fan
+      on_turn_on:
+        then:
+          fan.turn_on:
+            id: my_fan
+            direction: forward
+            oscillating: false
+```
+This triggers a second ON message, but also the proper state of direction and oscillating if they are reset by the device at turn off.
 
 ## For the very tecki ones
 

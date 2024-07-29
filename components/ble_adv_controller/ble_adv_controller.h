@@ -30,6 +30,7 @@ enum CommandType {
   FAN_SPEED = 32,
   FAN_ONOFF_SPEED = 33,
   FAN_DIR = 34,
+  FAN_OSC = 35,
 };
 
 class Command

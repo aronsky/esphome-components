@@ -16,6 +16,7 @@ from .. import (
 from ..const import (
     CONF_BLE_ADV_SPEED_COUNT,
     CONF_BLE_ADV_DIRECTION_SUPPORTED,
+    CONF_BLE_ADV_OSCILLATION_SUPPORTED,
 )
 
 BleAdvFan = bleadvcontroller_ns.class_('BleAdvFan', fan.Fan, BleAdvEntity)
@@ -26,6 +27,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(BleAdvFan),
             cv.Optional(CONF_BLE_ADV_SPEED_COUNT, default=6): cv.one_of(0,3,6),
             cv.Optional(CONF_BLE_ADV_DIRECTION_SUPPORTED, default=True): cv.boolean,
+            cv.Optional(CONF_BLE_ADV_OSCILLATION_SUPPORTED, default=False): cv.boolean,
         }
     ).extend(ENTITY_BASE_CONFIG_SCHEMA),
 )
@@ -37,3 +39,4 @@ async def to_code(config):
     await fan.register_fan(var, config)
     cg.add(var.set_speed_count(config[CONF_BLE_ADV_SPEED_COUNT]))
     cg.add(var.set_direction_supported(config[CONF_BLE_ADV_DIRECTION_SUPPORTED]))
+    cg.add(var.set_oscillation_supported(config[CONF_BLE_ADV_OSCILLATION_SUPPORTED]))

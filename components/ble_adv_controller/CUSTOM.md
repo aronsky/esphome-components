@@ -94,6 +94,7 @@ For info here are the "known" commands already extracted from code and their cor
 | fan_onoff_speed(3)  | N/A  | N/A         | 0xD2        | 0x31, arg0=0..3     | 0x31, arg2=0..3 |
 | fan_onoff_speed(6)  | N/A  | N/A         | 0xD2        | 0x32, arg0=0..6, arg1=6 | 0x31, arg2=0..6, arg1=0x20      |
 | fan_dir      | N/A         | N/A         | N/A         | 0x15, arg0=0..1   | 0x15, arg1=0..1   |
+| fan_osc      | N/A         | N/A         | N/A         | N/A               | 0x16, arg1=0..1   |
 
 NOTE: the cmd code given are hexa codes, **you have to translate them into decimal for use in HA service**, use Windows Calculator in programmer mode.
 
