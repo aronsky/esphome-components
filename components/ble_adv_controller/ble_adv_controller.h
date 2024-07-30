@@ -122,16 +122,11 @@ class BleAdvEntity: public Component, public Parented < BleAdvController >
 {
   public:
     virtual void dump_config() override = 0;
-    void set_index(uint8_t index) { this->index_ = index; }
-    void set_type(uint16_t type) { this->type_ = type; }
 
   protected:
     void dump_config_base(const char * tag);
     void command(CommandType cmd, const std::vector<uint8_t> &args);
     void command(CommandType cmd, uint8_t value1 = 0, uint8_t value2 = 0);
-
-    uint8_t index_ = 0;
-    uint16_t type_ = 0x0100;
 };
 
 } //namespace bleadvcontroller

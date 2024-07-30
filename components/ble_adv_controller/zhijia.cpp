@@ -558,27 +558,29 @@ ZhijiaArgs_t ZhijiaEncoder::translate_cmd(const Command &cmd) {
     case CommandType::LIGHT_DIM:
       if(isV0) {
         cmd_real.cmd_ = 0xB5; // -75
-        // app software: int i in between 0 -> 1023
+        // app software: int i in between 0 -> 999
         // (byte) ((0xFF0000 & i) >> 16), (byte) ((0x00FF00 & i) >> 8), (byte) (i & 0x0000FF)
-        uint16_t argBy4 = 4 * (uint16_t)cmd.args_[0]; // from 0..255 -> 0..1020
+        uint16_t argBy4 = (999 * (float)cmd.args_[0]) / 255; // from 0..255 -> 0..999
         cmd_real.args_[1] = ((argBy4 & 0xFF00) >> 8);
         cmd_real.args_[2] = (argBy4 & 0x00FF);
       } else {
         cmd_real.cmd_ = 0xAD; // -83
-        cmd_real.args_[0] = cmd.args_[0];
+        // app software: value in between 0 -> 249
+        cmd_real.args_[0] = (249 * (float)cmd.args_[0]) / 255;
       }
       break;
     case CommandType::LIGHT_CCT:
       if(isV0) {
         cmd_real.cmd_ = 0xB7; // -73
-        // app software: int i in between 0 -> 1023
+        // app software: int i in between 0 -> 999
         // (byte) ((0xFF0000 & i) >> 16), (byte) ((0x00FF00 & i) >> 8), (byte) (i & 0x0000FF)
-        uint16_t argBy4 = 4 * (uint16_t)cmd.args_[0]; 
+        uint16_t argBy4 = (999 * (float)cmd.args_[0]) / 255; 
         cmd_real.args_[1] = ((argBy4 & 0xFF00) >> 8);
         cmd_real.args_[2] = (argBy4 & 0x00FF);
       } else {
         cmd_real.cmd_ = 0xAE; // -82
-        cmd_real.args_[0] = cmd.args_[0];
+        // app software: value in between 0 -> 249
+        cmd_real.args_[0] = (249 * (float)cmd.args_[0]) / 255;
       }
       break;
     case CommandType::LIGHT_SEC_ON:

@@ -220,7 +220,7 @@ void FanLampEncoder::build_packet_v1(uint8_t* buf, Command &cmd) {
   std::copy(PREFIXv1, PREFIXv1 + sizeof(PREFIXv1), packet->prefix);
   FanLampArgs cmd_real = this->translate_cmd(cmd);
   packet->command = cmd_real.cmd_;
-  packet->group_idx = static_cast<uint16_t>(cmd.id_ & 0xF0FF) + ((cmd.index_ << 8) & 0x0F00);
+  packet->group_idx = static_cast<uint16_t>(cmd.id_ & 0xF0FF);
   packet->tx_count = cmd.tx_count_;
   packet->outs = 0;
   packet->src = static_cast<uint8_t>(seed ^ 1);
@@ -284,11 +284,11 @@ void FanLampEncoder::build_packet_v2(uint8_t * buf, Command &cmd, bool with_sign
   std::copy(PREFIXv2, PREFIXv2 + sizeof(PREFIXv2), packet->prefix);
   FanLampArgs cmd_real = this->translate_cmd(cmd);
   packet->packet_number = cmd.tx_count_;
-  packet->type = cmd.type_;
+  packet->type = 0x0100;
   packet->identifier = cmd.id_;
   packet->command = cmd_real.cmd_;
   std::copy(cmd_real.args_, cmd_real.args_ + sizeof(cmd_real.args_), packet->args);
-  packet->group_index = cmd.index_;
+  packet->group_index = 0;
   packet->rand = seed;
 
   ESP_LOGD(TAG, "%s - ID: '0x%08X', tx: %d, Command: '0x%02X', Args: [%d,%d,%d,%d]", this->id_.c_str(), cmd.id_, 

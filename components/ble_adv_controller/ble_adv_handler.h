@@ -41,10 +41,6 @@ public:
   CommandType cmd_;
   std::vector<uint8_t> args_{0,0,0,0,0};
 
-  // Attributes from entity
-  uint8_t index_ = 0;
-  uint16_t type_ = 0x0100;
-
   // Attributes from controller
   uint32_t id_ = 0;
   uint8_t tx_count_ = 0;

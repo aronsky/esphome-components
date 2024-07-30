@@ -147,14 +147,10 @@ void BleAdvController::loop() {
 
 void BleAdvEntity::dump_config_base(const char * tag) {
   ESP_LOGCONFIG(tag, "  Controller '%s'", this->get_parent()->get_name().c_str());
-  ESP_LOGCONFIG(tag, "  Type '0x%.4X'", this->type_);
-  ESP_LOGCONFIG(tag, "  Index '%d'", this->index_);
 }
 
 void BleAdvEntity::command(CommandType cmd_type, const std::vector<uint8_t> &args) {
   Command cmd(cmd_type);
-  cmd.type_ = this->type_;
-  cmd.index_ = this->index_;
   std::copy(args.begin(), args.end(), cmd.args_.begin());
   this->get_parent()->enqueue(cmd);
 }

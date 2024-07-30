@@ -75,12 +75,13 @@ ble_adv_controller:
     # For ZhiJia: Can be v0 (MSC16), v1 (MSC26) or v2 (MSC26A), default is v2
     # For Fanlamp: Can be any of 'v1a', 'v1b', 'v2' or 'v3', depending on how old your lamp is... Default is 'v3'
     variant: v3
-    # max_duration (default 3000, range 300 -> 10000): the maximum duration during which the command is advertized.
+    # max_duration (default 3000, range 300 -> 10000): the maximum duration in ms during which the command is advertized.
     # if a command is received before the 'max_duration' but after the 'duration', it is processed immediately 
     # Increasing this parameter will have no major consequences, the component will just keep advertize the command
     # Could be interesting at pairing time to have the pairing command advertized for a long time
     max_duration: 3000
-    # duration (default 200, range 100 -> 500): the MINIMUM duration during which the command is sent.
+    # duration (default 200, range 100 -> 500): the MINIMUM duration in ms during which the command is sent.
+    # It corresponds to the maximum time the controlled device is taking to process a command and be ready to receive a new one.
     # if a command is received before the 'duration' it is queued and processed later, 
     # if there is already a similar command pending, in this case the pending command is removed from the queue
     # Increasing this parameter will make the combination of commands slower. See 'Dynamic Configuration'.
@@ -198,6 +199,16 @@ fan:
             oscillating: false
 ```
 This triggers a second ON message, but also the proper state of direction and oscillating if they are reset by the device at turn off.
+
+## Holding Pair button
+If the pairing process of your lamp is requesting you to "hold the pair button on the phone app while switching on the lamp", it is not a reason to do the same in HA! The phone app has its own way to advertise messages for a long time which is in their case to maintain the button.
+
+Our way of handling it is different: the HA button is only sending ONE request to the component that will start advertising process during a maximum of `max_duration` if no other command is requested. If the default 3s is not enough for the process of your lamp you can increase it to 10000 (10s) or regularly press the pair button and the pairing will not stop being emitted (or only for a very very very short time).
+
+## Light Transition
+Esphome is providing features to handle 'smooth' transitions. While they are not very well supported by this component due to the BLE ADV technilogy used, they can still help reproduce the app phone behavior in such case.
+
+For instance, the Zhi Jia app is always sending at least 2 messages when the brightness or color temperature is updated and this can be achieved the same way by setting the light property 'default_transition_length' to the same value than 'duration', as per default 200ms. (NOT TESTED but may work and solve flickering issues)
 
 ## For the very tecki ones
 
