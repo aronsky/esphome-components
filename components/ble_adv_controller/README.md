@@ -49,7 +49,6 @@ The technical solution implemented by manufacturers to control those devices is 
 ble_adv_controller:
   - id: my_controller
     encoding: zhijia
-    duration: 200
 
 light:
   - platform: ble_adv_controller
@@ -63,7 +62,31 @@ button:
     cmd: pair
 ```
 
-## Example configuration: Composed lamp using fanlamp_pro with a main light, a secondary light, a fan and a Pair button
+## Example configuration: basic device using FanLamp Pro encoding v3, with light, fan and Pair button
+
+```yaml
+ble_adv_controller:
+  - id: my_controller
+    encoding: fanlamp_pro
+
+light:
+  - platform: ble_adv_controller
+    ble_adv_controller_id: my_controller
+    name: Main Light
+
+fan:
+  - platform: ble_adv_controller
+    ble_adv_controller_id: my_controller
+    name: Fan
+
+button:
+  - platform: ble_adv_controller
+    ble_adv_controller_id: my_controller
+    name: Pair
+    cmd: pair
+```
+
+## Example configuration: All options and their default values
 
 ```yaml
 ble_adv_controller:
@@ -107,11 +130,15 @@ light:
     # min_brightness: % minimum brightness supported by the light before it shuts done
     # just setup this value to 0, then test your lamp by decreasing the brightness percent by percent. 
     # when it switches off, you have the min_brightness to setup here.
-    # Default to 21%
-    min_brightness: 21%
-    # send_brightness_after_color_temperature_change: refresh the brightness after the color temperature was changed.
-    # workaround for issue https://github.com/aronsky/esphome-components/issues/18
-    send_brightness_after_color_temperature_change: false
+    # Default to 1%
+    min_brightness: 1%
+    # constant_brightness (default to false): the natural white is usually brighter than the cold or warm color
+    # if you setup constant_brightness to true, the natural white will have same brightness than cold and warm ones
+    constant_brightness: false
+    # separate_dim_cct (default to false): Zhi Jia ONLY
+    # if true, 2 distinct commands will be sent to the lamp for brightness and color temperature
+    # may be needed for some Zhi Jia v2 lamps that do not support a unique command
+    separate_dim_cct: false
 
   - platform: ble_adv_controller
     ble_adv_controller_id: my_controller
@@ -162,6 +189,9 @@ Once you managed to define the relevant values (without the need to re flash eac
 
 ### Reverse Cold / Warm
 If this component works, but the cold and warm temperatures are reversed (that is, setting the temperature in Home Assistant to warm results in cold/blue light, and setting it to cold results in warm/yellow light), add a `reversed: true` line to your `ble_adv_controller` config.
+
+### Cold / Warm and brightness do not work on Zhi Jia v1 or v2 lamp
+If the brightness or color temperature does not work for your Zhi Jia v1 or v2 lamp, please setup the `separate_dim_cct` option to true and try again.
 
 ### Minimum Brightness
 If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a percentage).

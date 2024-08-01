@@ -59,6 +59,7 @@ public:
   virtual void dump_config() override;
   
   void set_min_tx_duration(uint32_t tx_duration) { this->number_duration_.state = tx_duration; }
+  uint32_t get_min_tx_duration() { return (uint32_t)this->number_duration_.state; }
   void set_max_tx_duration(uint32_t tx_duration) { this->max_tx_duration_ = tx_duration; }
   void set_seq_duration(uint32_t seq_duration) { this->seq_duration_ = seq_duration; }
   void set_forced_id(uint32_t forced_id) { this->forced_id_ = forced_id; }

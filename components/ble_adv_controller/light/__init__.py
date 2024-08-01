@@ -3,6 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import light, output
 from esphome.cpp_helpers import setup_entity
 from esphome.const import (
+    CONF_CONSTANT_BRIGHTNESS,
     CONF_COLD_WHITE_COLOR_TEMPERATURE,
     CONF_WARM_WHITE_COLOR_TEMPERATURE,
     CONF_MIN_BRIGHTNESS,
@@ -19,7 +20,7 @@ from .. import (
 
 from ..const import (
     CONF_BLE_ADV_SECONDARY,
-    CONF_BRIGHTNESS_AFTER_COLOR_CHANGE,
+    CONF_BLE_ADV_SPLIT_DIM_CCT,
 )
 
 BleAdvLight = bleadvcontroller_ns.class_('BleAdvLight', light.LightOutput, BleAdvEntity)
@@ -32,10 +33,11 @@ CONFIG_SCHEMA = cv.All(
                 cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(BleAdvLight),
                 cv.Optional(CONF_COLD_WHITE_COLOR_TEMPERATURE, default="167 mireds"): cv.color_temperature,
                 cv.Optional(CONF_WARM_WHITE_COLOR_TEMPERATURE, default="333 mireds"): cv.color_temperature,
-                cv.Optional(CONF_MIN_BRIGHTNESS, default=0.21): cv.percentage,
+                cv.Optional(CONF_CONSTANT_BRIGHTNESS, default=False): cv.boolean,
+                cv.Optional(CONF_MIN_BRIGHTNESS, default="1%"): cv.percentage,
+                cv.Optional(CONF_BLE_ADV_SPLIT_DIM_CCT, default=False): cv.boolean,
                 # override default value of default_transition_length to 0s as mostly not supported by those lights
                 cv.Optional(CONF_DEFAULT_TRANSITION_LENGTH, default="0s"): cv.positive_time_period_milliseconds,
-                cv.Optional(CONF_BRIGHTNESS_AFTER_COLOR_CHANGE, default=False): cv.boolean,
             }
         ).extend(ENTITY_BASE_CONFIG_SCHEMA),
         light.RGB_LIGHT_SCHEMA.extend(
@@ -58,5 +60,6 @@ async def to_code(config):
     if not CONF_BLE_ADV_SECONDARY in config:
         cg.add(var.set_cold_white_temperature(config[CONF_COLD_WHITE_COLOR_TEMPERATURE]))
         cg.add(var.set_warm_white_temperature(config[CONF_WARM_WHITE_COLOR_TEMPERATURE]))
+        cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
+        cg.add(var.set_split_dim_cct(config[CONF_BLE_ADV_SPLIT_DIM_CCT]))
         cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS]))
-        cg.add(var.set_brightness_after_color_change(config[CONF_BRIGHTNESS_AFTER_COLOR_CHANGE]))

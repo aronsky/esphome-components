@@ -69,7 +69,7 @@ CONTROLLER_BASE_CONFIG = cv.ENTITY_BASE_SCHEMA.extend(
         cv.GenerateID(): cv.declare_id(BleAdvController),
         cv.Optional(CONF_DURATION, default=200): cv.All(cv.positive_int, cv.Range(min=100, max=500)),
         cv.Optional(CONF_BLE_ADV_MAX_DURATION, default=3000): cv.All(cv.positive_int, cv.Range(min=300, max=10000)),
-        cv.Optional(CONF_BLE_ADV_SEQ_DURATION, default=50): cv.All(cv.positive_int, cv.Range(min=0, max=150)),
+        cv.Optional(CONF_BLE_ADV_SEQ_DURATION, default=100): cv.All(cv.positive_int, cv.Range(min=0, max=150)),
         cv.Optional(CONF_REVERSED, default=False): cv.boolean,
         cv.Optional(CONF_BLE_ADV_SHOW_CONFIG, default=True): cv.boolean,
     }

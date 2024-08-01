@@ -555,32 +555,41 @@ ZhijiaArgs_t ZhijiaEncoder::translate_cmd(const Command &cmd) {
     case CommandType::LIGHT_OFF:
       cmd_real.cmd_ = isV0 ? 0xB2 : 0xA6;  // -78 : -90
       break;
+    case CommandType::LIGHT_WCOLOR:
+      if (isV0) {
+        cmd_real.cmd_ = 0; // no corresponding command found, maybe -92 ?
+      } else {
+        cmd_real.cmd_ = 0xA8; // -88
+        cmd_real.args_[0] = (250 * (float)cmd.args_[1]) / 255;
+        cmd_real.args_[1] = (250 * (float)cmd.args_[0]) / 255;
+      }
+      break;
     case CommandType::LIGHT_DIM:
       if(isV0) {
         cmd_real.cmd_ = 0xB5; // -75
-        // app software: int i in between 0 -> 999
+        // app software: int i in between 0 -> 1000
         // (byte) ((0xFF0000 & i) >> 16), (byte) ((0x00FF00 & i) >> 8), (byte) (i & 0x0000FF)
-        uint16_t argBy4 = (999 * (float)cmd.args_[0]) / 255; // from 0..255 -> 0..999
+        uint16_t argBy4 = (1000 * (float)cmd.args_[0]) / 255; // from 0..255 -> 0..1000
         cmd_real.args_[1] = ((argBy4 & 0xFF00) >> 8);
         cmd_real.args_[2] = (argBy4 & 0x00FF);
       } else {
         cmd_real.cmd_ = 0xAD; // -83
-        // app software: value in between 0 -> 249
-        cmd_real.args_[0] = (249 * (float)cmd.args_[0]) / 255;
+        // app software: value in between 0 -> 250
+        cmd_real.args_[0] = (250 * (float)cmd.args_[0]) / 255;
       }
       break;
     case CommandType::LIGHT_CCT:
       if(isV0) {
         cmd_real.cmd_ = 0xB7; // -73
-        // app software: int i in between 0 -> 999
+        // app software: int i in between 0 -> 1000
         // (byte) ((0xFF0000 & i) >> 16), (byte) ((0x00FF00 & i) >> 8), (byte) (i & 0x0000FF)
-        uint16_t argBy4 = (999 * (float)cmd.args_[0]) / 255; 
+        uint16_t argBy4 = (1000 * (float)cmd.args_[0]) / 255; 
         cmd_real.args_[1] = ((argBy4 & 0xFF00) >> 8);
         cmd_real.args_[2] = (argBy4 & 0x00FF);
       } else {
         cmd_real.cmd_ = 0xAE; // -82
-        // app software: value in between 0 -> 249
-        cmd_real.args_[0] = (249 * (float)cmd.args_[0]) / 255;
+        // app software: value in between 0 -> 250
+        cmd_real.args_[0] = (250 * (float)cmd.args_[0]) / 255;
       }
       break;
     case CommandType::LIGHT_SEC_ON:

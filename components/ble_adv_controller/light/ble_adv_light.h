@@ -13,8 +13,9 @@ class BleAdvLight : public light::LightOutput, public BleAdvEntity, public Entit
 
   void set_cold_white_temperature(float cold_white_temperature) { this->cold_white_temperature_ = cold_white_temperature; }
   void set_warm_white_temperature(float warm_white_temperature) { this->warm_white_temperature_ = warm_white_temperature; }
+  void set_constant_brightness(bool constant_brightness) { this->constant_brightness_ = constant_brightness; }
   void set_min_brightness(float min_brightness) { this->min_brightness_ = min_brightness; }
-  void set_brightness_after_color_change(bool brightness_after_color_change) { this->brightness_after_color_change_ = brightness_after_color_change; }
+  void set_split_dim_cct(bool split_dim_cct) { this->split_dim_cct_ = split_dim_cct; }
 
   void setup_state(light::LightState *state) override { this->state_ = state; };
   void write_state(light::LightState *state) override;
@@ -27,11 +28,11 @@ class BleAdvLight : public light::LightOutput, public BleAdvEntity, public Entit
   float warm_white_temperature_;
   bool constant_brightness_;
   float min_brightness_;
-  bool brightness_after_color_change_;
+  bool split_dim_cct_;
 
   bool is_off_{true};
-  uint8_t brightness_{0};
-  uint8_t warm_color_{0};
+  float brightness_{0};
+  float warm_color_{0};
 };
 
 class BleAdvSecLight : public light::LightOutput, public BleAdvEntity, public EntityBase

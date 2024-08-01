@@ -162,19 +162,12 @@ FanLampArgs FanLampEncoder::translate_cmd(const Command &cmd) {
       break;
     case CommandType::LIGHT_WCOLOR:
       cmd_real.cmd_ = 0x21;
-      {
-        // Correct minimum brightness in any case for FanLamp as it could switch off if too low
-        // and this would create different state in between the light and this component
-        uint8_t br_corrected = std::max(cmd.args_[1], (uint8_t)7);
-        uint8_t cold = (br_corrected * (255 - cmd.args_[0])) / 255;
-        uint8_t warm = (br_corrected * (cmd.args_[0])) / 255;
-        if (isV2) {
-          cmd_real.args_[2] = cold;
-          cmd_real.args_[3] = warm;
-        } else {
-          cmd_real.args_[0] = cold;
-          cmd_real.args_[1] = warm;
-        }
+      if (isV2) {
+        cmd_real.args_[2] = cmd.args_[0];
+        cmd_real.args_[3] = cmd.args_[1];
+      } else {
+        cmd_real.args_[0] = cmd.args_[0];
+        cmd_real.args_[1] = cmd.args_[1];
       }
       break;
     case CommandType::LIGHT_SEC_ON:

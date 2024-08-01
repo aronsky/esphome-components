@@ -51,7 +51,7 @@ void BleAdvController::setup() {
 void BleAdvController::dump_config() {
   ESP_LOGCONFIG(TAG, "BleAdvController '%s'", this->get_object_id().c_str());
   ESP_LOGCONFIG(TAG, "  Hash ID '%X'", this->forced_id_);
-  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %d ms", this->number_duration_.state);
+  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %d ms", this->get_min_tx_duration());
   ESP_LOGCONFIG(TAG, "  Transmission Max Duration: %d ms", this->max_tx_duration_);
   ESP_LOGCONFIG(TAG, "  Transmission Sequencing Duration: %d ms", this->seq_duration_);
   ESP_LOGCONFIG(TAG, "  Configuration visible: %s", this->show_config_ ? "YES" : "NO");
@@ -93,8 +93,6 @@ bool BleAdvController::enqueue(Command &cmd) {
 
   // Remove any previous command of the same type in the queue, if not used for several purposes
   if (cmd.cmd_ != CommandType::FAN_ONOFF_SPEED // Used for ON / OFF / SPEED
-      && cmd.cmd_ != CommandType::FAN_DIR      // Used for Direction ON / OFF
-      && cmd.cmd_ != CommandType::FAN_OSC      // Used for Oscillation ON / OFF
       && cmd.cmd_ != CommandType::CUSTOM) {
     uint8_t nb_rm = std::count_if(this->commands_.begin(), this->commands_.end(), [&](QueueItem& q){ return q.cmd_type_ == cmd.cmd_; });
     if (nb_rm) {
@@ -111,9 +109,9 @@ bool BleAdvController::enqueue(Command &cmd) {
   }
 
   // setup seq duration for each packet
-  bool use_seq_duration = (this->seq_duration_ > 0) && (this->seq_duration_ < this->number_duration_.state);
+  bool use_seq_duration = (this->seq_duration_ > 0) && (this->seq_duration_ < this->get_min_tx_duration());
   for (auto & param : this->commands_.back().params_) {
-    param.duration_ = use_seq_duration ? this->seq_duration_: this->number_duration_.state;
+    param.duration_ = use_seq_duration ? this->seq_duration_: this->get_min_tx_duration();
   }
   
   return true;

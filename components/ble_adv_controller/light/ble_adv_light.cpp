@@ -26,6 +26,7 @@ void BleAdvLight::dump_config() {
   ESP_LOGCONFIG(TAG, "  Base Light '%s'", this->state_->get_name().c_str());
   ESP_LOGCONFIG(TAG, "  Cold White Temperature: %f mireds", this->cold_white_temperature_);
   ESP_LOGCONFIG(TAG, "  Warm White Temperature: %f mireds", this->warm_white_temperature_);
+  ESP_LOGCONFIG(TAG, "  Constant Brightness: %s", this->constant_brightness_ ? "true" : "false");
   ESP_LOGCONFIG(TAG, "  Minimum Brightness: 0x%.2X", this->min_brightness_);
 }
 
@@ -45,31 +46,42 @@ void BleAdvLight::write_state(light::LightState *state) {
     this->is_off_ = false;
   }
 
-  // Compute Corrected Brigtness / Warm Color Temperature (potentially reversed) as uint8_t: 0 -> 255
-  uint8_t updated_br = 255 * ensure_range(this->min_brightness_ + state->current_values.get_brightness() * (1.f - this->min_brightness_));
-  uint8_t updated_ct = 255 * ensure_range((state->current_values.get_color_temperature() - this->cold_white_temperature_) / (this->warm_white_temperature_ - this->cold_white_temperature_));
-  updated_ct = this->get_parent()->is_reversed() ? 255 - updated_ct : updated_ct;
+  // Compute Corrected Brigtness / Warm Color Temperature (potentially reversed) as float: 0 -> 1
+  float updated_brf = ensure_range(this->min_brightness_ + state->current_values.get_brightness() * (1.f - this->min_brightness_));
+  float updated_ctf = ensure_range((state->current_values.get_color_temperature() - this->cold_white_temperature_) / (this->warm_white_temperature_ - this->cold_white_temperature_));
+  updated_ctf = this->get_parent()->is_reversed() ? 1.0 - updated_ctf : updated_ctf;
 
-  // During transition(current / remote states are the same), do not process change 
+  // During transition(current / remote states are not the same), do not process change 
   //    if Brigtness / Color Temperature was not modified enough
-  bool br_modified = abs(this->brightness_ - updated_br) > 5;
-  bool ct_modified = abs(this->warm_color_ - updated_ct) > 5;
-  if (!br_modified && !ct_modified && (state->current_values != state->remote_values)) {
+  float br_diff = abs(this->brightness_ - updated_brf) * 100;
+  float ct_diff = abs(this->warm_color_ - updated_ctf) * 100;
+  bool is_last = (state->current_values == state->remote_values);
+  if (br_diff < 3 && ct_diff < 3 && !is_last) {
     return;
   }
   
-  this->brightness_ = updated_br;
-  this->warm_color_ = updated_ct;
-  ESP_LOGD(TAG, "Cold: %d, Warm: %d, Brightness: %d", 255 - updated_ct, updated_ct, updated_br);
+  this->brightness_ = updated_brf;
+  this->warm_color_ = updated_ctf;
 
-  if(this->get_parent()->is_supported(CommandType::LIGHT_WCOLOR)) {
-    this->command(CommandType::LIGHT_WCOLOR, updated_ct, updated_br);
-  } else {
-    if (ct_modified) {
-      this->command(CommandType::LIGHT_CCT, updated_ct);
+  if(this->get_parent()->is_supported(CommandType::LIGHT_WCOLOR) && !this->split_dim_cct_) {
+    light::LightColorValues eff_values = state->current_values;
+    eff_values.set_brightness(updated_brf);
+    float cwf, wwf;
+    if (this->get_parent()->is_reversed()) {
+      eff_values.as_cwww(&wwf, &cwf, 0, this->constant_brightness_);
+    } else {
+      eff_values.as_cwww(&cwf, &wwf, 0, this->constant_brightness_);
     }
-    if (br_modified || (this->brightness_after_color_change_ && ct_modified)) {
-      this->command(CommandType::LIGHT_DIM, updated_br);
+    ESP_LOGD(TAG, "Updating Cold: %.0f%, Warm: %.0f%", cwf*100, wwf*100);
+    this->command(CommandType::LIGHT_WCOLOR, (uint8_t) (cwf*255), (uint8_t) (wwf*255));
+  } else {
+    if (ct_diff != 0) {
+      ESP_LOGD(TAG, "Updating warm color temperature: %.0f%", updated_ctf*100);
+      this->command(CommandType::LIGHT_CCT, (uint8_t) (255*updated_ctf));
+    }
+    if (br_diff != 0) {
+      ESP_LOGD(TAG, "Updating brightness: %.0f%", updated_brf*100);
+      this->command(CommandType::LIGHT_DIM, (uint8_t) (255*updated_brf));
     }
   }
 }
