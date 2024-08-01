@@ -46,7 +46,7 @@ public:
   uint8_t tx_count_ = 0;
 };
 
-const size_t MAX_PACKET_LEN = 26;
+const size_t MAX_PACKET_LEN = 31;
 
 class BleAdvParam
 {

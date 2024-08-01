@@ -663,11 +663,13 @@ uint8_t ZhijiaEncoder::get_adv_data(std::vector< BleAdvParam > & params, Command
       break;
     case VARIANT_V1:
       msc16_msc26::aes26Encrypt(MAC, uuid, MAC, 0x7F, cmd_real.cmd_, cmd.tx_count_, cmd_real.args_, param.buf_);
+      param.len_ = 26;
       break;
     case VARIANT_V2:
       msc26a::stage1(cmd_real.args_, cmd_real.cmd_, cmd.tx_count_, 0x7F, MAC, uuid, param.buf_);
       msc26a::stage2(param.buf_, 0x18, 0x2);
       msc26a::stage3(param.buf_, 0x1a, param.buf_);
+      param.len_ = 26;
       break;
     default:
       ESP_LOGW(TAG, "get_adv_data called with invalid variant %d", this->variant_);

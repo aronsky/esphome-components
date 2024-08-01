@@ -109,7 +109,7 @@ protected:
   std::list< QueueItem > commands_;
 
   // Being advertised data properties
-  uint8_t tx_count_ = 0;
+  uint8_t tx_count_ = 1;
   uint32_t adv_start_time_ = 0;
   uint16_t adv_id_ = 0;
 };

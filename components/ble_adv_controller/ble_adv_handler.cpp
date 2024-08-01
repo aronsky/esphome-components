@@ -77,11 +77,15 @@ void BleAdvHandler::loop() {
     // if packets to be advertised, advertise the front one
     if (!this->packets_.empty()) {
       BleAdvParam & packet = this->packets_.front().param_;
-      this->adv_data_.p_manufacturer_data = packet.buf_;
-      this->adv_data_.manufacturer_len = packet.len_;
       //ESP_LOGD(TAG, "Effective advertising start at %d: id %d - %s", millis(), this->packets_.front().id_,
       //        esphome::format_hex_pretty(packet.buf_, packet.len_).c_str());
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_config_adv_data(&(this->adv_data_)));
+      if (packet.len_ == MAX_PACKET_LEN) {
+        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_config_adv_data_raw(packet.buf_, packet.len_));
+      } else {
+        this->adv_data_.p_manufacturer_data = packet.buf_;
+        this->adv_data_.manufacturer_len = packet.len_;
+        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_config_adv_data(&(this->adv_data_)));
+      }
       ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_start_advertising(&(this->adv_params_)));
       this->adv_stop_time_ = millis() + this->packets_.front().param_.duration_;
       this->packets_.front().processed_once_ = true;

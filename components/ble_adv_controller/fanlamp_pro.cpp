@@ -11,7 +11,7 @@ static const char *TAG = "fanlamp_pro";
 
 #pragma pack(push, 1)
 typedef struct {
-  uint8_t prefix[5];
+  uint8_t prefix[10];
   uint8_t packet_number;
   uint16_t type;
   uint32_t identifier;
@@ -22,7 +22,7 @@ typedef struct {
   uint8_t spare;
   uint16_t rand;
   uint16_t crc16;
-} man_data_v2_t;
+} adv_data_v2_t;
 
 typedef struct { /* Advertising Data for version 1*/
   uint8_t prefix[8];
@@ -37,13 +37,13 @@ typedef struct { /* Advertising Data for version 1*/
   uint8_t r2;
   uint16_t seed;
   uint16_t crc16;
-} man_data_v1_t;
+} adv_data_v1_t;
 #pragma pack(pop)
 
-static uint8_t HEADERv1a[2] = {0x77, 0xF8};
-static uint8_t HEADERv1b[3] = {0xF9, 0x08, 0x49};
+static uint8_t HEADERv1a[7] = {0x02, 0x01, 0x02, 0x1B, 0x03, 0x77, 0xF8};
+static uint8_t HEADERv1b[8] = {0x02, 0x01, 0x02, 0x1B, 0x03, 0xF9, 0x08, 0x49};
 static uint8_t PREFIXv1[8] = {0xAA, 0x98, 0x43, 0xAF, 0x0B, 0x46, 0x46, 0x46};
-static uint8_t PREFIXv2[5] = {0xF0, 0x08, 0x10, 0x80, 0x00};
+static uint8_t PREFIXv2[10] = {0x02, 0x01, 0x02, 0x1B, 0x16, 0xF0, 0x08, 0x10, 0x80, 0x00};
 
 static uint8_t XBOXES[128] = {
   0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC,
@@ -216,7 +216,7 @@ FanLampArgs FanLampEncoder::translate_cmd(const Command &cmd) {
 
 void FanLampEncoder::build_packet_v1(uint8_t* buf, Command &cmd) {
   uint16_t seed = this->get_seed();
-  man_data_v1_t *packet = (man_data_v1_t*)buf;
+  adv_data_v1_t *packet = (adv_data_v1_t*)buf;
   std::copy(PREFIXv1, PREFIXv1 + sizeof(PREFIXv1), packet->prefix);
   FanLampArgs cmd_real = this->translate_cmd(cmd);
   packet->command = cmd_real.cmd_;
@@ -244,43 +244,39 @@ void FanLampEncoder::build_packet_v1(uint8_t* buf, Command &cmd) {
 void FanLampEncoder::build_packet_v1a(uint8_t* buf, Command &cmd) {
 
   const size_t base = sizeof(HEADERv1a);
-  const size_t size = 26;
+  const size_t size = MAX_PACKET_LEN;
   std::copy(HEADERv1a, HEADERv1a + base, buf);
   
   build_packet_v1(buf + base, cmd);
   
-  uint16_t* crc16_2 = (uint16_t*) &buf[24];
+  uint16_t* crc16_2 = (uint16_t*) &buf[size-2];
   *crc16_2 = htons(v2_crc16_ccitt(buf + base + 8, 14, v2_crc16_ccitt(buf + base + 1, 5, 0xffff)));
 
   for (size_t i=base; i < size; i++) {
     buf[i] = reverse_byte(buf[i]);
   }
-  // something strange here... the 'start' at 8+base is a nonsense as we are working on buffer AFTER base....
-  //v1_whiten(buf + base, 8+base, size-base, 83);
-  // kept the "logic" by hardcoding the value of base that was 7 in previous software, then 8+7=15
-  v1_whiten(buf + base, 15, size-base, 83);
+  
+  v1_whiten(buf + base, 8+base, size-base, 83);
 }
 
 void FanLampEncoder::build_packet_v1b(uint8_t* buf, Command &cmd) {
   const size_t base = sizeof(HEADERv1b);
-  const size_t size = 26;
+  const size_t size = MAX_PACKET_LEN;
   std::copy(HEADERv1b, HEADERv1b + base, buf);
 
   build_packet_v1(buf + base, cmd);
   
-  buf[25] = 0xaa;
+  buf[size-1] = 0xaa;
   for (size_t i=base; i < size; i++) {
     buf[i] = reverse_byte(buf[i]);
   }
-  // something strange here... the 'start' at 8+base is a nonsense as we are working on buffer AFTER base....
-  //v1_whiten(buf + base, 8+base, size-base, 83);
-  // kept the "logic" by hardcoding the value of base that was 8 in previous software, then 8+8=16
-  v1_whiten(buf + base, 16, size-base, 83);
+
+  v1_whiten(buf + base, 8+base, size-base, 83);
 }
 
 void FanLampEncoder::build_packet_v2(uint8_t * buf, Command &cmd, bool with_sign) {
   uint16_t seed = this->get_seed();
-  man_data_v2_t * packet = (man_data_v2_t *) buf;
+  adv_data_v2_t * packet = (adv_data_v2_t *) buf;
   std::copy(PREFIXv2, PREFIXv2 + sizeof(PREFIXv2), packet->prefix);
   FanLampArgs cmd_real = this->translate_cmd(cmd);
   packet->packet_number = cmd.tx_count_;
@@ -295,11 +291,11 @@ void FanLampEncoder::build_packet_v2(uint8_t * buf, Command &cmd, bool with_sign
           packet->packet_number, packet->command, packet->args[0], packet->args[1], packet->args[2], packet->args[3]);
 
   if (with_sign) {
-    packet->sign = sign(buf + 3, packet->packet_number, seed);
+    packet->sign = sign(buf + 8, packet->packet_number, seed);
   }
 
-  v2_whiten(buf + 4, 18, (uint8_t) seed, 0);
-  packet->crc16 = v2_crc16_ccitt(buf + 2, 22, ~seed);
+  v2_whiten(buf + 9, 18, (uint8_t) seed, 0);
+  packet->crc16 = v2_crc16_ccitt(buf + 7, 22, ~seed);
 }
 
 uint16_t FanLampEncoder::get_seed() {
