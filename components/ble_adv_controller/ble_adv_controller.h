@@ -78,7 +78,7 @@ public:
   // Services
   void on_pair();
   void on_unpair();
-  void on_cmd(int cmd, int arg0, int arg1, int arg2, int arg3);
+  void on_cmd(float cmd, float arg0, float arg1, float arg2, float arg3);
 #endif
 
   bool enqueue(Command &cmd);

@@ -1,8 +1,9 @@
 #include "fanlamp_pro.h"
 #include "esphome/core/log.h"
-#include <mbedtls/aes.h>
 #include <arpa/inet.h>
 
+#define MBEDTLS_AES_ALT
+#include <aes_alt.h>
 
 namespace esphome {
 namespace bleadvcontroller {
@@ -83,7 +84,7 @@ uint16_t sign(uint8_t* buf, uint8_t tx_count, uint16_t seed) {
 
 void v2_whiten(uint8_t *buf, uint8_t size, uint8_t seed, uint8_t salt) {
   for (uint8_t i = 0; i < size; ++i) {
-    buf[i] ^= XBOXES[(seed + i + 9) & 0x1f + (salt & 0x3) * 0x20];
+    buf[i] ^= XBOXES[((seed + i + 9) & 0x1f) + (salt & 0x3) * 0x20];
     buf[i] ^= seed;
   }
 }

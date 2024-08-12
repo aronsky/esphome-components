@@ -68,13 +68,13 @@ void BleAdvController::on_unpair() {
   this->enqueue(cmd);
 }
 
-void BleAdvController::on_cmd(int cmd_type, int arg0, int arg1, int arg2, int arg3) {
+void BleAdvController::on_cmd(float cmd_type, float arg0, float arg1, float arg2, float arg3) {
   Command cmd(CommandType::CUSTOM);
-  cmd.args_[0] = cmd_type;
-  cmd.args_[1] = arg0;
-  cmd.args_[2] = arg1;
-  cmd.args_[3] = arg2;
-  cmd.args_[4] = arg3;
+  cmd.args_[0] = (uint8_t)cmd_type;
+  cmd.args_[1] = (uint8_t)arg0;
+  cmd.args_[2] = (uint8_t)arg1;
+  cmd.args_[3] = (uint8_t)arg2;
+  cmd.args_[4] = (uint8_t)arg3;
   this->enqueue(cmd);
 }
 #endif
