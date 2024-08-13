@@ -97,6 +97,7 @@ ble_adv_controller:
     # variant: variant of the encoding 
     # For ZhiJia: Can be v0 (MSC16), v1 (MSC26) or v2 (MSC26A), default is v2
     # For Fanlamp: Can be any of 'v1a', 'v1b', 'v2' or 'v3', depending on how old your lamp is... Default is 'v3'
+    # Can be configured dynamically in HA directly, device 'Configuration' section, "Encoding".
     variant: v3
     # max_duration (default 3000, range 300 -> 10000): the maximum duration in ms during which the command is advertized.
     # if a command is received before the 'max_duration' but after the 'duration', it is processed immediately 
@@ -108,6 +109,7 @@ ble_adv_controller:
     # if a command is received before the 'duration' it is queued and processed later, 
     # if there is already a similar command pending, in this case the pending command is removed from the queue
     # Increasing this parameter will make the combination of commands slower. See 'Dynamic Configuration'.
+    # Can be configured dynamically in HA directly, device 'Configuration' section, "Duration".
     duration: 200
     # reversed: reversing the cold / warm at encoding time, needed for some controllers
     # default to false
@@ -131,6 +133,7 @@ light:
     # just setup this value to 0, then test your lamp by decreasing the brightness percent by percent. 
     # when it switches off, you have the min_brightness to setup here.
     # Default to 1%
+    # Can be configured dynamically in HA directly, device 'Configuration' section, "Min Brightness".
     min_brightness: 1%
     # constant_brightness (default to false): the natural white is usually brighter than the cold or warm color
     # if you setup constant_brightness to true, the natural white will have same brightness than cold and warm ones
@@ -194,7 +197,7 @@ If this component works, but the cold and warm temperatures are reversed (that i
 If the brightness or color temperature does not work for your Zhi Jia v1 or v2 lamp, please setup the `separate_dim_cct` option to true and try again.
 
 ### Minimum Brightness
-If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a percentage).
+If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a percentage) or directly via the dynamic configuration in HA `Min Brightness`.
 
 ### Saving state on ESP32 reboot
 Fan and Light entities are inheriting properties from their ESPHome parent [Fan](https://esphome.io/components/fan/index.html) and [Light](https://esphome.io/components/light/index.html), in particular they implement the `restore_mode` which has default value `ALWAYS_OFF`. Just adding it to your config with value `RESTORE_DEFAULT_OFF` will have the Fan or Light remember its last state (ON/OFF, but also brightness, color temperature and fan speed).

@@ -10,6 +10,16 @@ float ensure_range(float f) {
   return (f > 1.0) ? 1.0 : ( (f < 0.0) ? 0.0 : f );
 }
 
+void BleAdvLight::setup() {
+  // init number for Min Brightness
+  this->number_min_brightness_.set_id("Min Brightness", this->get_name());
+  this->number_min_brightness_.set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+  this->number_min_brightness_.traits.set_min_value(0);
+  this->number_min_brightness_.traits.set_max_value(100);
+  this->number_min_brightness_.traits.set_step(1);
+  this->number_min_brightness_.publish_state(this->number_min_brightness_.state);
+}
+
 light::LightTraits BleAdvLight::get_traits() {
   auto traits = light::LightTraits();
 
@@ -27,7 +37,7 @@ void BleAdvLight::dump_config() {
   ESP_LOGCONFIG(TAG, "  Cold White Temperature: %f mireds", this->cold_white_temperature_);
   ESP_LOGCONFIG(TAG, "  Warm White Temperature: %f mireds", this->warm_white_temperature_);
   ESP_LOGCONFIG(TAG, "  Constant Brightness: %s", this->constant_brightness_ ? "true" : "false");
-  ESP_LOGCONFIG(TAG, "  Minimum Brightness: 0x%.2X", this->min_brightness_);
+  ESP_LOGCONFIG(TAG, "  Minimum Brightness: 0x%.2X", this->get_min_brightness());
 }
 
 void BleAdvLight::write_state(light::LightState *state) {
@@ -47,7 +57,7 @@ void BleAdvLight::write_state(light::LightState *state) {
   }
 
   // Compute Corrected Brigtness / Warm Color Temperature (potentially reversed) as float: 0 -> 1
-  float updated_brf = ensure_range(this->min_brightness_ + state->current_values.get_brightness() * (1.f - this->min_brightness_));
+  float updated_brf = ensure_range(this->get_min_brightness() + state->current_values.get_brightness() * (1.f - this->get_min_brightness()));
   float updated_ctf = ensure_range((state->current_values.get_color_temperature() - this->cold_white_temperature_) / (this->warm_white_temperature_ - this->cold_white_temperature_));
   updated_ctf = this->get_parent()->is_reversed() ? 1.0 - updated_ctf : updated_ctf;
 

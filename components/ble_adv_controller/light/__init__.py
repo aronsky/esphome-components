@@ -63,3 +63,4 @@ async def to_code(config):
         cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
         cg.add(var.set_split_dim_cct(config[CONF_BLE_ADV_SPLIT_DIM_CCT]))
         cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS]))
+        cg.add(cg.App.register_number(var.get_number_min_brightness()))
