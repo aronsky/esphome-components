@@ -7,20 +7,16 @@ namespace bleadvcontroller {
 
 static const char *TAG = "ble_adv_fan";
 
-fan::FanTraits BleAdvFan::get_traits() {
-  auto traits = fan::FanTraits();
-
-  traits.set_direction(this->use_direction_);
-  traits.set_speed(this->speed_count_ > 0);
-  traits.set_supported_speed_count(this->speed_count_);
-  traits.set_oscillation(this->use_oscillation_);
-
-  return traits;
+void BleAdvFan::dump_config() {
+  LOG_FAN("", "BleAdvFan", this);
+  BleAdvEntity::dump_config_base(TAG);
 }
 
-void BleAdvFan::dump_config() {
-  ESP_LOGCONFIG(TAG, "BleAdvFan '%s'", this->get_name().c_str());
-  BleAdvEntity::dump_config_base(TAG);
+void BleAdvFan::setup() {
+  auto restore = this->restore_state_();
+  if (restore.has_value()) {
+    restore->apply(*this);
+  }
 }
 
 /**
@@ -40,16 +36,16 @@ void BleAdvFan::control(const fan::FanCall &call) {
       // Switch ON, always setting with SPEED
       ESP_LOGD(TAG, "BleAdvFan::control - Setting ON with speed %d", this->speed);
       if (this->get_parent()->is_supported(CommandType::FAN_ONOFF_SPEED)) {
-        this->command(CommandType::FAN_ONOFF_SPEED, this->speed, this->speed_count_);
+        this->command(CommandType::FAN_ONOFF_SPEED, this->speed, this->traits_.supported_speed_count());
       } else {
         this->command(CommandType::FAN_ON);
-        this->command(CommandType::FAN_SPEED, this->speed, this->speed_count_);
+        this->command(CommandType::FAN_SPEED, this->speed, this->traits_.supported_speed_count());
       }
     } else {
       // Switch OFF
       ESP_LOGD(TAG, "BleAdvFan::control - Setting OFF");
       if (this->get_parent()->is_supported(CommandType::FAN_ONOFF_SPEED)) {
-        this->command(CommandType::FAN_ONOFF_SPEED, 0, this->speed_count_);
+        this->command(CommandType::FAN_ONOFF_SPEED, 0, this->traits_.supported_speed_count());
       } else {
         this->command(CommandType::FAN_OFF);
       }

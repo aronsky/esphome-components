@@ -166,6 +166,9 @@ If this component works, but the cold and warm temperatures are reversed (that i
 ### Minimum Brightness
 If the minimum brightness is too bright, and you know that your light can go darker - try changing the minimum brightness via the `min_brightness` configuration option (it takes a percentage).
 
+### Saving state on ESP32 reboot
+Fan and Light entities are inheriting properties from their ESPHome parent [Fan](https://esphome.io/components/fan/index.html) and [Light](https://esphome.io/components/light/index.html), in particular they implement the `restore_mode` which has default value `ALWAYS_OFF`. Just adding it to your config with value `RESTORE_DEFAULT_OFF` will have the Fan or Light remember its last state (ON/OFF, but also brightness, color temperature and fan speed).
+
 ### Action on turn on/off
 Some devices perform some automatic actions when the main light or the fan are switched off, as for instance switch off the secondary light, or reset the Fan Direction or Oscillation status.
 In order to update the state the same way in Home Assistant, simply add an [automation](https://esphome.io/components/light/index.html#light-on-turn-on-off-trigger) in your config, for instance:
@@ -200,12 +203,12 @@ fan:
 ```
 This triggers a second ON message, but also the proper state of direction and oscillating if they are reset by the device at turn off.
 
-## Holding Pair button
+### Holding Pair button
 If the pairing process of your lamp is requesting you to "hold the pair button on the phone app while switching on the lamp", it is not a reason to do the same in HA! The phone app has its own way to advertise messages for a long time which is in their case to maintain the button.
 
 Our way of handling it is different: the HA button is only sending ONE request to the component that will start advertising process during a maximum of `max_duration` if no other command is requested. If the default 3s is not enough for the process of your lamp you can increase it to 10000 (10s) or regularly press the pair button and the pairing will not stop being emitted (or only for a very very very short time).
 
-## Light Transition
+### Light Transition
 Esphome is providing features to handle 'smooth' transitions. While they are not very well supported by this component due to the BLE ADV technilogy used, they can still help reproduce the app phone behavior in such case.
 
 For instance, the Zhi Jia app is always sending at least 2 messages when the brightness or color temperature is updated and this can be achieved the same way by setting the light property 'default_transition_length' to the same value than 'duration', as per default 200ms. (NOT TESTED but may work and solve flickering issues)
