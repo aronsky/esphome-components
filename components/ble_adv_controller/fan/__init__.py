@@ -4,6 +4,7 @@ from esphome.components import fan
 
 from esphome.const import (
     CONF_OUTPUT_ID,
+    CONF_RESTORE_MODE,
 )
 
 from .. import (
@@ -28,6 +29,8 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_BLE_ADV_SPEED_COUNT, default=6): cv.one_of(0,3,6),
             cv.Optional(CONF_BLE_ADV_DIRECTION_SUPPORTED, default=True): cv.boolean,
             cv.Optional(CONF_BLE_ADV_OSCILLATION_SUPPORTED, default=False): cv.boolean,
+            # override default value for restore mode, to always restore as it was if possible
+            cv.Optional(CONF_RESTORE_MODE, default="RESTORE_DEFAULT_OFF"): cv.enum(fan.RESTORE_MODES, upper=True, space="_"),
         }
     ).extend(ENTITY_BASE_CONFIG_SCHEMA),
 )

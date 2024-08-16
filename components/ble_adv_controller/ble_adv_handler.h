@@ -1,12 +1,24 @@
 #pragma once
 
+#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
+#ifdef USE_API
+#include "esphome/components/api/custom_api_device.h"
+#endif
+
 #include <esp_gap_ble_api.h>
 #include <vector>
 #include <list>
 
 namespace esphome {
+
+#ifdef USE_ESP32_BLE_CLIENT
+namespace esp32_ble_tracker {
+  class ESPBTDevice;
+}
+#endif
+
 namespace bleadvcontroller {
 
 enum CommandType {
@@ -36,29 +48,58 @@ enum CommandType {
 class Command
 {
 public:
-  Command(CommandType cmd): cmd_(cmd) {}
+  Command(CommandType cmd = CommandType::NOCMD): main_cmd_(cmd) {}
 
-  CommandType cmd_;
-  std::vector<uint8_t> args_{0,0,0,0,0};
-
-  // Attributes from controller
-  uint32_t id_ = 0;
-  uint8_t tx_count_ = 0;
+  CommandType main_cmd_;
+  uint8_t cmd_{0};
+  uint8_t args_[4]{0};
 };
 
-const size_t MAX_PACKET_LEN = 31;
+/**
+  Controller Parameters
+ */
+struct ControllerParam_t {
+  uint32_t id_ = 0;
+  uint8_t tx_count_ = 0;
+  uint8_t index_ = 0;
+  uint16_t seed_ = 0;
+};
+
+static constexpr size_t MAX_PACKET_LEN = 31;
 
 class BleAdvParam
 {
 public:
   BleAdvParam() {};
-  uint8_t buf_[MAX_PACKET_LEN]{0};
-  size_t len_{MAX_PACKET_LEN};
-  uint32_t duration_{100};
-
-  // Only move operators to avoid data copy
   BleAdvParam(BleAdvParam&&) = default;
   BleAdvParam& operator=(BleAdvParam&&) = default;
+
+  void from_raw(const uint8_t * buf, size_t len);
+  void from_hex_string(std::string & raw);
+  void init_with_ble_param(uint8_t ad_flag, uint8_t data_type);
+
+  bool has_ad_flag() const { return this->ad_flag_index_ != MAX_PACKET_LEN; }
+  uint8_t get_ad_flag() const { return this->buf_[this->ad_flag_index_ + 2]; }
+
+  bool has_data() const { return this->data_index_ != MAX_PACKET_LEN; }
+  void set_data_len(size_t len);
+  uint8_t get_data_len() const { return this->buf_[this->data_index_] - 1; }
+  uint8_t get_data_type() const { return this->buf_[this->data_index_ + 1]; }
+  uint8_t * get_data_buf() {  return this->buf_ + this->data_index_ + 2; }
+  const uint8_t * get_const_data_buf() const { return this->buf_ + this->data_index_ + 2; }
+
+  uint8_t * get_full_buf() { return this->buf_; }
+  uint8_t get_full_len() { return this->len_; }
+
+  bool operator==(const BleAdvParam & comp) { return std::equal(comp.buf_, comp.buf_ + MAX_PACKET_LEN, this->buf_); }
+
+  uint32_t duration_{100};
+
+protected:
+  uint8_t buf_[MAX_PACKET_LEN]{0};
+  size_t len_{0};
+  size_t ad_flag_index_{MAX_PACKET_LEN};
+  size_t data_index_{MAX_PACKET_LEN};
 };
 
 class BleAdvProcess
@@ -82,22 +123,48 @@ public:
  */
 class BleAdvEncoder {
 public:
-  BleAdvEncoder(const std::string & id, const std::string & encoding, int variant): 
-      id_(id), encoding_(encoding), variant_(variant) {}
+  BleAdvEncoder(const std::string & encoding, const std::string & variant): 
+      id_(encoding + " - " + variant), encoding_(encoding), variant_(variant) {}
 
   const std::string & get_id() const { return this->id_; }
+  const std::string & get_encoding() const { return this->encoding_; }
+  const std::string & get_variant() const { return this->variant_; }
   bool is_id(const std::string & ref_id) const { return ref_id == this->id_; }
-  bool is_id(const std::string & encoding, int variant) const { return (encoding == this->encoding_) && (variant == this->variant_); }
+  bool is_id(const std::string & encoding, const std::string & variant) const { return (encoding == this->encoding_) && (variant == this->variant_); }
   bool is_encoding(const std::string & encoding) const { return (encoding == this->encoding_); }
 
-  virtual uint8_t get_adv_data(std::vector< BleAdvParam > & params, Command &cmd) = 0;
-  virtual bool is_supported(const Command &cmd) = 0;
+  void set_ble_param(uint8_t ad_flag, uint8_t adv_data_type){ this->ad_flag_ = ad_flag; this->adv_data_type_ = adv_data_type; }
+  bool is_ble_param(uint8_t ad_flag, uint8_t adv_data_type) { return this->ad_flag_ == ad_flag && this->adv_data_type_ == adv_data_type; }
+  void set_header(const std::vector< uint8_t > && header) { this->header_ = header; }
+
+  virtual std::vector< Command > translate(const Command & cmd, const ControllerParam_t & cont) = 0;
+  virtual void encode(std::vector< BleAdvParam > & params, Command &cmd, ControllerParam_t & cont);
+  virtual bool is_supported(const Command &cmd) ;
+  virtual bool decode(const BleAdvParam & packet, Command &cmd, ControllerParam_t & cont);
 
 protected:
+  virtual bool decode(uint8_t* buf, Command &cmd, ControllerParam_t & cont) { return false; };
+  virtual void encode(uint8_t* buf, Command &cmd, ControllerParam_t & cont) { };
+
+  // utils for encoding
+  void reverse_all(uint8_t* buf, uint8_t len);
+  void whiten(uint8_t *buf, size_t len, uint8_t seed);
+
+  // encoder identifiers
   std::string id_;
   std::string encoding_;
-  int variant_ = 0;
+  std::string variant_;
+
+  // BLE parameters
+  uint8_t ad_flag_{0x00};
+  uint8_t adv_data_type_{ESP_BLE_AD_MANUFACTURER_SPECIFIC_TYPE};
+
+  // Common parameters
+  std::vector< uint8_t > header_;
+  size_t len_{0};
 };
+
+#define ENSURE_EQ(param1, param2, ...) if ((param1) != (param2)) { ESP_LOGD(this->id_.c_str(), __VA_ARGS__); return false; }
 
 /**
   BleAdvMultiEncoder:
@@ -106,13 +173,17 @@ protected:
 class BleAdvMultiEncoder: public BleAdvEncoder
 {
 public:
-  BleAdvMultiEncoder(const std::string id, const std::string encoding): BleAdvEncoder(id, encoding, -1) {}
-  virtual uint8_t get_adv_data(std::vector< BleAdvParam > & params, Command &cmd) override;
+  BleAdvMultiEncoder(const std::string encoding): BleAdvEncoder(encoding, "All") {}
+  virtual void encode(std::vector< BleAdvParam > & params, Command &cmd, ControllerParam_t & cont) override;
   virtual bool is_supported(const Command &cmd) override;
-  void add_encoder(BleAdvEncoder * encoder_id) { this->encoder_ids_.push_back(encoder_id); }
+  void add_encoder(BleAdvEncoder * encoder) { this->encoders_.push_back(encoder); }
+
+  // Not used
+  virtual std::vector< Command > translate(const Command & cmd, const ControllerParam_t & cont) { return std::vector< Command >(); };
+  virtual bool decode(const BleAdvParam & packet, Command &cmd, ControllerParam_t & cont) override { return false; }
 
 protected:
-  std::vector< BleAdvEncoder * > encoder_ids_;
+  std::vector< BleAdvEncoder * > encoders_;
 };
 
 /**
@@ -122,20 +193,37 @@ protected:
     with handling of prioritization and parallel send when possible
  */
 class BleAdvHandler: public Component
+#ifdef USE_API
+  , public api::CustomAPIDevice
+#endif
 {
 public:
-  // Loop handling
+  // component handling
+  void setup() override;
   void loop() override;
 
   // Encoder registration and access
-  void add_encoder(BleAdvEncoder * encoder) { this->encoders_.push_back(encoder); }
-  BleAdvEncoder & get_encoder(const std::string & id);
-  BleAdvEncoder & get_encoder(const std::string & encoding, int variant);
+  void add_encoder(BleAdvEncoder * encoder);
+  BleAdvEncoder * get_encoder(const std::string & id);
+  BleAdvEncoder * get_encoder(const std::string & encoding, const std::string & variant);
   std::vector<std::string> get_ids(const std::string & encoding);
 
   // Advertiser
   uint16_t add_to_advertiser(std::vector< BleAdvParam > & params);
   void remove_from_advertiser(uint16_t msg_id);
+
+  // identify which encoder is relevant for the param, decode and log Action and Controller parameters
+  bool identify_param(const BleAdvParam & param, bool ignore_ble_param);
+
+  // Listener
+#ifdef USE_ESP32_BLE_CLIENT
+  void capture(const esp32_ble_tracker::ESPBTDevice & device, bool ignore_ble_param = true, uint16_t rem_time = 60);
+#endif
+
+#ifdef USE_API
+  // HA service to decode
+  void on_raw_decode(std::string raw);
+#endif
 
 protected:
   // ref to registered encoders
@@ -145,22 +233,6 @@ protected:
   std::list< BleAdvProcess > packets_;
   uint16_t id_count = 1;
   uint32_t adv_stop_time_ = 0;
-
-  esp_ble_adv_data_t adv_data_ = {
-    .set_scan_rsp = false,
-    .include_name = false,
-    .include_txpower = false,
-    .min_interval = 0x0001,
-    .max_interval = 0x0004,
-    .appearance = 0x00,
-    .manufacturer_len = 0,
-    .p_manufacturer_data = nullptr,
-    .service_data_len = 0,
-    .p_service_data = nullptr,
-    .service_uuid_len = 0,
-    .p_service_uuid = nullptr,
-    .flag = (ESP_BLE_ADV_FLAG_LIMIT_DISC | ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_DMT_CONTROLLER_SPT),
-  };
 
   esp_ble_adv_params_t adv_params_ = {
     .adv_int_min = 0x20,
@@ -173,6 +245,8 @@ protected:
     .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
   };
 
+  // Packets already captured once
+  std::list< BleAdvParam > listen_packets_;
 };
 
 } //namespace bleadvcontroller

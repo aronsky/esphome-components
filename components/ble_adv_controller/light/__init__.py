@@ -9,6 +9,7 @@ from esphome.const import (
     CONF_MIN_BRIGHTNESS,
     CONF_OUTPUT_ID,
     CONF_DEFAULT_TRANSITION_LENGTH,
+    CONF_RESTORE_MODE,
 )
 
 from .. import (
@@ -38,6 +39,8 @@ CONFIG_SCHEMA = cv.All(
                 cv.Optional(CONF_BLE_ADV_SPLIT_DIM_CCT, default=False): cv.boolean,
                 # override default value of default_transition_length to 0s as mostly not supported by those lights
                 cv.Optional(CONF_DEFAULT_TRANSITION_LENGTH, default="0s"): cv.positive_time_period_milliseconds,
+                # override default value for restore mode, to always restore as it was if possible
+                cv.Optional(CONF_RESTORE_MODE, default="RESTORE_DEFAULT_OFF"): cv.enum(light.RESTORE_MODES, upper=True, space="_"),
             }
         ).extend(ENTITY_BASE_CONFIG_SCHEMA),
         light.RGB_LIGHT_SCHEMA.extend(
@@ -57,10 +60,10 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_OUTPUT_ID])
     await entity_base_code_gen(var, config)
     await light.register_light(var, config)
-    if not CONF_BLE_ADV_SECONDARY in config:
-        cg.add(var.set_cold_white_temperature(config[CONF_COLD_WHITE_COLOR_TEMPERATURE]))
-        cg.add(var.set_warm_white_temperature(config[CONF_WARM_WHITE_COLOR_TEMPERATURE]))
+    if CONF_BLE_ADV_SECONDARY in config:
+        cg.add(var.set_traits())
+    else:
+        cg.add(var.set_traits(config[CONF_COLD_WHITE_COLOR_TEMPERATURE], config[CONF_WARM_WHITE_COLOR_TEMPERATURE]))
         cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
         cg.add(var.set_split_dim_cct(config[CONF_BLE_ADV_SPLIT_DIM_CCT]))
-        cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS]))
-        cg.add(cg.App.register_number(var.get_number_min_brightness()))
+        cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS] * 100, 0, 100, 1))

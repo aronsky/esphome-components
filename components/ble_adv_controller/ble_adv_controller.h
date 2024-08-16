@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/entity_base.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/preferences.h"
 #ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
 #endif
@@ -15,30 +16,46 @@
 namespace esphome {
 namespace bleadvcontroller {
 
-/**
-  BleAdvSelect: basic implementation of 'Select' to handle configuration choice from HA directly
- */
-class BleAdvSelect : public select::Select
+
+//  Base class to define a dynamic Configuration
+template < class BaseEntity >
+class BleAdvDynConfig: public BaseEntity
 {
 public:
-  void control(const std::string &value) override { this->publish_state(value); }
-  void set_id(const char * name, const StringRef & parent_name);
+  void init(const char * name, const StringRef & parent_name) {
+    // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
+    this->ref_name_ = std::string(parent_name) + " - " + std::string(name);
+    this->set_object_id(this->ref_name_.c_str());
+    this->set_name(this->ref_name_.c_str());
+    this->set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+    this->sub_init();
+    this->publish_state(this->state);
+  }
+
+  // register to App and restore from config / saved data
+  virtual void sub_init() = 0;
 
 protected:
   std::string ref_name_;
+  ESPPreferenceObject rtc_{nullptr};
+};
+
+/**
+  BleAdvSelect: basic implementation of 'Select' to handle configuration choice from HA directly
+ */
+class BleAdvSelect: public BleAdvDynConfig < select::Select > {
+protected:
+  void control(const std::string &value) override;
+  void sub_init() override;
 };
 
 /**
   BleAdvNumber: basic implementation of 'Number' to handle duration(s) choice from HA directly
  */
-class BleAdvNumber : public number::Number
-{
-public:
-  void control(float value) override { this->publish_state(value); }
-  void set_id(const char * name, const StringRef & parent_name);
-
+class BleAdvNumber: public BleAdvDynConfig < number::Number > {
 protected:
-  std::string ref_name_;
+  void control(float value) override;
+  void sub_init() override;
 };
 
 /**
@@ -58,28 +75,29 @@ public:
   void loop() override;
   virtual void dump_config() override;
   
-  void set_min_tx_duration(uint32_t tx_duration) { this->number_duration_.state = tx_duration; }
+  void set_min_tx_duration(int tx_duration, int min, int max, int step);
   uint32_t get_min_tx_duration() { return (uint32_t)this->number_duration_.state; }
   void set_max_tx_duration(uint32_t tx_duration) { this->max_tx_duration_ = tx_duration; }
   void set_seq_duration(uint32_t seq_duration) { this->seq_duration_ = seq_duration; }
-  void set_forced_id(uint32_t forced_id) { this->forced_id_ = forced_id; }
-  void set_forced_id(const std::string & str_id) { this->forced_id_ = fnv1_hash(str_id); }
-  void set_encoding_and_variant(const std::string & encoding, uint8_t variant);
-  select::Select * get_select_encoding() { return &(this->select_encoding_); }
-  number::Number * get_number_duration() { return &(this->number_duration_); }
+  void set_forced_id(uint32_t forced_id) { this->params_.id_ = forced_id; }
+  void set_forced_id(const std::string & str_id) { this->params_.id_ = fnv1_hash(str_id); }
+  void set_index(uint8_t index) { this->params_.index_ = index; }
+  void set_encoding_and_variant(const std::string & encoding, const std::string & variant);
   void set_reversed(bool reversed) { this->reversed_ = reversed; }
   bool is_reversed() const { return this->reversed_; }
-  bool is_supported(const Command &cmd) { return this->get_encoder().is_supported(cmd); }
+  bool is_supported(const Command &cmd) { return this->cur_encoder_->is_supported(cmd); }
   void set_show_config(bool show_config) { this->show_config_ = show_config; }
+  bool is_show_config() { return this->show_config_; }
 
   void set_handler(BleAdvHandler * handler) { this->handler_ = handler; }
-  BleAdvEncoder & get_encoder() { return this->handler_->get_encoder(this->select_encoding_.state); }
+  void refresh_encoder(std::string id, size_t index);
 
 #ifdef USE_API
   // Services
   void on_pair();
   void on_unpair();
   void on_cmd(float cmd, float arg0, float arg1, float arg2, float arg3);
+  void on_raw_inject(std::string raw);
 #endif
 
   bool enqueue(Command &cmd);
@@ -89,11 +107,13 @@ protected:
   uint32_t max_tx_duration_ = 3000;
   uint32_t seq_duration_ = 150;
 
-  uint32_t forced_id_ = 0;
+  ControllerParam_t params_;
+
   bool reversed_;
 
   bool show_config_{false};
   BleAdvSelect select_encoding_;
+  BleAdvEncoder * cur_encoder_{nullptr};
   BleAdvNumber number_duration_;
   BleAdvHandler * handler_{nullptr};
 
@@ -110,7 +130,6 @@ protected:
   std::list< QueueItem > commands_;
 
   // Being advertised data properties
-  uint8_t tx_count_ = 1;
   uint32_t adv_start_time_ = 0;
   uint16_t adv_id_ = 0;
 };
