@@ -30,6 +30,11 @@ void BleAdvFan::control(const fan::FanCall &call) {
   bool oscillation_refresh = false;
   if (call.get_state().has_value()) {
     // State ON/OFF or SPEED changed
+    if (!this->state && *call.get_state()) {
+      // forcing direction / oscillation refresh on 'switch on' if requested
+      direction_refresh |= this->forced_refresh_on_start_;
+      oscillation_refresh |= this->forced_refresh_on_start_;
+    }
     this->state = *call.get_state();
     if (call.get_speed().has_value()) {
       this->speed = *call.get_speed();
@@ -43,9 +48,6 @@ void BleAdvFan::control(const fan::FanCall &call) {
         this->command(CommandType::FAN_ON);
         this->command(CommandType::FAN_SPEED, this->speed, this->traits_.supported_speed_count());
       }
-      // aslo forcing direction / oscillation refresh if requested
-      direction_refresh |= this->forced_refresh_on_start_;
-      oscillation_refresh |= this->forced_refresh_on_start_;
     } else {
       // Switch OFF
       ESP_LOGD(TAG, "BleAdvFan::control - Setting OFF");
