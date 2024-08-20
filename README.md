@@ -1,30 +1,25 @@
-# Lev's ESPHome Components
+# BLE ADV ESPHome Components
 
-Custom components for ESPHome
+Custom components for ESPHome using BLE Advertising
 
-## Lamps controlled by BLE Advertising
+## Fans / Lamps controlled by BLE Advertising
 
 Use this for various Chinese lamps that are controlled via BLE advertising packets.
-Includes Fan and Light Control as well as pairing button and Custom service.
 Supported apps:
 
-* LampSmart Pro (tested against Marpou Ceiling Light), including variant v1a / v1b / v2 / v3
-* FanLamp Pro (including Fan / multiple lights), including variant v1a / v1b / v2 / v3
-* ZhiJia (including Fan / light) including variant v0, v1, v2 (only v2 Tested against aftermarket LED drivers)
+* LampSmart Pro, including variant v1 / v3
+* FanLamp Pro, including variant v1 / v2 / v3
+* Zhi Jia, including variant v0 / v1 / v2
+* Other (Legacy), including variant v1a / v1b
 
 Details can be found [here](components/ble_adv_controller/README.md).
 
-## Lamps based on BLE Advertising (deprecated)
-
-Use this for various Chinese lamps that are controlled via BLE advertising packets. Supported apps:
-
-* LampSmart Pro (tested against Marpou Ceiling Light)
-* ZhiJia (tested against aftermarket LED drivers; only the latest version is currently supported)
-
-Details can be found [here](components/ble_adv_light/README.md).
-
-## LampSmart Pro (deprecated)
-
-Using this component directly is deprecated, and it will be removed in the future. Please switch to
-the above component with the LampSmart Pro configuration.
-Used for Marpou Ceiling Light - see details [here](components/lampsmart_pro_light/README.md).
+## Credits
+Based on the initial work from:
+* @MasterDevX, [lampify](https://github.com/MasterDevX/lampify)
+* @flicker581, [lampsmart_pro_light](https://github.com/flicker581/esphome-lampsmart)
+* @aronsky, [ble_adv_light](https://github.com/aronsky/esphome-components)
+* @14roiron, [zhijia encoders](https://github.com/aronsky/esphome-components/issues/11), [investigations](https://github.com/aronsky/esphome-components/issues/18)
+* All testers and bug reporters from the initial threads:
+  * https://community.home-assistant.io/t/controlling-ble-ceiling-light-with-ha/520612/199
+  * https://github.com/aronsky/esphome-components/pull/17

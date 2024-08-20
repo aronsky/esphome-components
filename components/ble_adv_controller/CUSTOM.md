@@ -354,12 +354,12 @@ Note that arg1 should take the 'generic_flag' value, but no idea how to build th
 ## The ESP BLE Advertising Technical Stack
 As seen before, the component is based on standard ESP BLE Advertising. As per Bluetooth standard, this advertising consists in having the Bluetooth stack sending repeatidly messages at a given rate that is customizable by the caller, in between 20ms and 10s, see parameters doc [here](https://github.com/espressif/esp-idf/blob/main/components/bt/host/bluedroid/api/include/api/esp_gap_ble_api.h#L401).
 
-In this component is is setup to the minimum 20ms, meaning that when the component starts ESP BLE advertising with a given message, the message is repeatidly sent every 20ms until the component requests to stop.
+In this component it is setup to the minimum 20ms, meaning that when the component starts ESP BLE advertising with a given message, the message is repeatidly sent every 20ms until the component requests to stop.
 
 ## Implementation
 The whole process is controlled by the `BleAdvHandler`, which has a unique class instance in order to ensure what is sent to the ESP BLE stack is controlled in a unique way even if there are several controllers requesting to publish messages at the same time. `BlAdvHandler` is in charge of gathering all requests coming, organize them and ensure they are published as fast as possible to the ESP BLE stack. It is the only class communicating with the ESP BLE Stack.
 
-Each device controlled has a corresponding instance of `BleAdvController` (configured by `ble_adv_controller`yaml section). This controller references the `BleAdvHandler` and is the only one to communicate with it. The controller also references its `BleAdvEncoder` type, which it the class in charge of building advertising messages.
+Each device controlled has a corresponding instance of `BleAdvController` (configured by `ble_adv_controller`yaml section). This controller references the `BleAdvHandler` and is the only one to communicate with it. The controller also references its `BleAdvEncoder` type, which is the class in charge of building advertising messages.
 
 Each Home Assistant entity (button, light, fan) has a corresponding instance of `BleAdvEntity`, implemented by 
 `BleAdvButton`, `BleAdvLight` and `BleAdvFan`. Those entities are receiving the requests coming from Home Assistant.
@@ -368,14 +368,14 @@ They are linked to their parent `BleAdvController`.
 ## The command flow
 When an entity class is receiving a request from Home Assistant, the following is performed:
 * The entity converts the request into a standardized `Command` and asks its linked controller to process it.
-* The controller finds the relevant encoder to be used as per its configuration and asks it to build the message(s) corresponding to the command. Their can be several messages, as in case of encoding for all variants.
-* The controller put the messages built in its processing queue, potentially discarding previous messages of the same type that would be pending in the processing queue.
+* The controller finds the relevant encoder to be used as per its configuration and asks it to build the message(s) corresponding to the command. There can be several messages, as in case of encoding for all variants.
+* The controller puts the messages built in its processing queue, potentially discarding previous messages of the same type that would be pending in the processing queue.
 * The controller is dequeuing the processing queue, for each message or group of messages:
   * it requests the `BleAdvHandler` to start advertising the message(s)
   * it requests the `BleAdvHandler` to stop advertising the message(s) after a given duration which can be:
     * the minimum `duration` if there are other messages pending in the queue
     * the maximum `max_duration` if there is no other message after those ones
-* On start advertising request the `BleAdvHandler` put the message(s) in its sequential queue and process them:
+* On start advertising request the `BleAdvHandler` puts the message(s) in its sequential queue and processes them:
   * Each message is advertised for a given short base `seq_duration` (setup by the controller)
   * Once this duration is expired, the advertising is stopped, the message is put back at the end of the queue and the next message in the queue starts to be advertized. All messages in the processing queue are then advertized sequentially allowing several controllers to emit messages "simultaneously", (in fact repeatedly by dedicated sequence)
   * In case there is only one message in the sequential queue, the advertising is not stopped until it effectively receives a stop advertising request.
@@ -387,7 +387,8 @@ This command flow ensures:
 
 ## Durations
 The setting of the multiple duration parameters is important and should respect rules:
-* The `seq_duration` should be significantly higher than the ESP BLE minimum interval (20ms). If setup to 30ms, the message will be advertized twice during this duration. If setup to 150ms it will be advertized 8 times. It corresponds to the maximum time needed by the device to receive (but not process) a command. 
+* The `seq_duration` should be significantly higher than the ESP BLE minimum interval (20ms). If setup to 30ms, the message will be advertized twice during this duration. If setup to 150ms it will be advertized 8 times. 
+  * It corresponds to the maximum time needed by the device to receive (but not process) a command. 
   * Recommended value is 50ms.
   * If the device controlled is far from the ESPcontroller, there could be garbage on the line and this seq_duration would need to be increased.
   * If the seq_duration is too low your device will go in panic mode so be careful

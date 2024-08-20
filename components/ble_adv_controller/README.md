@@ -273,7 +273,7 @@ You can have the following warnings in logs:
 [16:08:56][W][component:238]: Components should block for at most 30 ms.
 ```
 This is not an issue, it just means ESPHome considered it spent too much time in our component and that it should not be the case. It has no real impact but it means the Api / Wifi / BLE may not work properly or work slowly.
-In fact this is mostly due to ESPHome itself as 99% of the time spent in our component is due to the logs... Each line of log needs 10ms to be processed ............... So 5 lines of log during a transaction and we are over the limit...
+In fact this is mostly due to ESPHome itself as 99% of the time spent in our component is due to the logs... Each line of log needs 10ms to be processed ............... So 5 lines of log during a transaction and we are over the limit... A [PR in ESPHome](https://github.com/esphome/esphome/pull/5373) is pending to solve this.
 
 In order to avoid this, once you have finalized your config and all is working OK, I recommend to [setup the log level to INFO](https://esphome.io/components/logger.html) instead of DEBUG (which is the default).
 
