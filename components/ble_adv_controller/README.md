@@ -174,6 +174,12 @@ fan:
     # use_oscillation: ability to start / stop the fan oscillation.
     # default to false, only available for FanLamp v2 / v3
     use_oscillation: false
+    # forced_refresh_on_start: forces the send of oscillation / direction at fan start
+    # some fans are resetting the direction / oscillation when the fan is stopped
+    # so when they are switched on, the direction / oscillation state in HA is no more in sync
+    # with the effective state of the device
+    # default to true.
+    forced_refresh_on_start: true
 
 button:
   - platform: ble_adv_controller

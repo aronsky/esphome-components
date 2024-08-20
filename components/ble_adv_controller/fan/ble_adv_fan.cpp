@@ -26,6 +26,8 @@ On ON with Speed: State and Speed received
 On Direction Change: only direction received
 */
 void BleAdvFan::control(const fan::FanCall &call) {
+  bool direction_refresh = false;
+  bool oscillation_refresh = false;
   if (call.get_state().has_value()) {
     // State ON/OFF or SPEED changed
     this->state = *call.get_state();
@@ -41,6 +43,9 @@ void BleAdvFan::control(const fan::FanCall &call) {
         this->command(CommandType::FAN_ON);
         this->command(CommandType::FAN_SPEED, this->speed, this->traits_.supported_speed_count());
       }
+      // aslo forcing direction / oscillation refresh if requested
+      direction_refresh |= this->forced_refresh_on_start_;
+      oscillation_refresh |= this->forced_refresh_on_start_;
     } else {
       // Switch OFF
       ESP_LOGD(TAG, "BleAdvFan::control - Setting OFF");
@@ -55,6 +60,10 @@ void BleAdvFan::control(const fan::FanCall &call) {
   if (call.get_direction().has_value()) {
     // Change of direction
     this->direction = *call.get_direction();
+    direction_refresh = true;
+  }
+
+  if (direction_refresh && this->traits_.supports_direction()) {
     bool isFwd = this->direction == fan::FanDirection::FORWARD;
     ESP_LOGD(TAG, "BleAdvFan::control - Setting direction %s", (isFwd ? "fwd":"rev"));
     this->command(CommandType::FAN_DIR, isFwd);
@@ -63,6 +72,10 @@ void BleAdvFan::control(const fan::FanCall &call) {
   if (call.get_oscillating().has_value()) {
     // Switch Oscillation
     this->oscillating = *call.get_oscillating();
+    oscillation_refresh = true;
+  }
+
+  if (oscillation_refresh && this->traits_.supports_oscillation()) {
     ESP_LOGD(TAG, "BleAdvFan::control - Setting Oscillation %s", (this->oscillating ? "ON":"OFF"));
     this->command(CommandType::FAN_OSC, this->oscillating);
   }
