@@ -105,18 +105,17 @@ std::vector< Command > FanLampEncoderV1::translate(const Command & cmd, const Co
 bool FanLampEncoderV1::decode(uint8_t* buf, Command &cmd, ControllerParam_t & cont){
   this->whiten(buf, this->len_, 0x6F);
   this->reverse_all(buf, this->len_);
-  ENSURE_EQ(std::equal(this->prefix_.begin(), this->prefix_.end(), buf), true, "prefix KO");
-
-  std::string decoded = esphome::format_hex_pretty(buf, this->len_);
 
   uint8_t data_start = this->prefix_.size();
   data_map_t * data = (data_map_t *) (buf + data_start);
 
-  // distinguish between lampsmart pro and fanlamp pro
+  // distinguish in between different encoder variants
+  if(!std::equal(this->prefix_.begin(), this->prefix_.end(), buf)) return false;
   if (data->command == 0x28 && this->pair_arg3_ != data->args[2]) return false;
   if (data->command != 0x28 && !this->pair_arg_only_on_pair_ && data->args[2] != this->pair_arg3_) return false;
   if (data->command != 0x28 && this->pair_arg_only_on_pair_ && data->args[2] != 0) return false;
 
+  std::string decoded = esphome::format_hex_pretty(buf, this->len_);
   uint16_t seed = htons(data->seed);
   uint8_t seed8 = static_cast<uint8_t>(seed & 0xFF);
   ENSURE_EQ(data->r2, this->xor1_ ? seed8 ^ 1 : seed8, "Decoded KO (r2) - %s", decoded.c_str());

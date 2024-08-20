@@ -7,10 +7,13 @@ Custom components for ESPHome using BLE Advertising
 Use this for various Chinese lamps that are controlled via BLE advertising packets.
 Supported apps:
 
-* LampSmart Pro, including variant v1 / v3
-* FanLamp Pro, including variant v1 / v2 / v3
-* Zhi Jia, including variant v0 / v1 / v2
-* Other (Legacy), including variant v1a / v1b
+* LampSmart Pro 
+* Lamp Smart Pro - Soft Lighting / Smart Lighting
+* FanLamp Pro
+* ApplianceSmart
+* Vmax smart
+* Zhi Jia
+* Other (Legacy), removed app from play store: 'FanLamp', 'ControlSwitch'
 
 Details can be found [here](components/ble_adv_controller/README.md).
 

@@ -81,6 +81,13 @@ BLE_ADV_ENCODERS = {
                 "ble_param": [ 0x19, 0x03 ],
                 "header": [0x77, 0xF8],
             },
+            # v2 is only used by LampSmart Pro - Soft Lighting
+            "v2": {
+                "class": FanLampEncoderV2,
+                "args": [ [0x10, 0x80, 0x00], 0x0100, False ],
+                "ble_param": [ 0x19, 0x03 ],
+                "header": [0xF0, 0x08],
+            },
             "v3": {
                 "class": FanLampEncoderV2,
                 "args": [ [0x30, 0x80, 0x00], 0x0100, True ],
@@ -94,10 +101,6 @@ BLE_ADV_ENCODERS = {
             "v1b": {
                 "legacy": True,
                 "msg": "please use 'other - v1b' for exact replacement, or 'lampsmart_pro' v1 / v3 if effectively using LampSmart Pro app",
-            },
-            "v2": {
-                "legacy": True,
-                "msg": "please use 'lampsmart_pro - v3': exact replacement",
             },
         },
         "default_variant": "v3",
