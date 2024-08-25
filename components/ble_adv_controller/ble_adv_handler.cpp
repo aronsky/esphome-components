@@ -44,7 +44,7 @@ void BleAdvParam::from_hex_string(std::string & raw) {
   // convert to integers
   uint8_t raw_int[MAX_PACKET_LEN]{0};
   uint8_t len = std::min(MAX_PACKET_LEN, raw.size()/2);
-  for (uint8_t i; i < len; ++i) {
+  for (uint8_t i=0; i < len; ++i) {
     raw_int[i] = stoi(raw.substr(2*i, 2), 0, 16);
   }
   this->from_raw(raw_int, len);
