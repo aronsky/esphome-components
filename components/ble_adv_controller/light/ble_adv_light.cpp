@@ -36,7 +36,7 @@ void BleAdvLight::dump_config() {
   ESP_LOGCONFIG(TAG, "  Cold White Temperature: %f mireds", this->traits_.get_min_mireds());
   ESP_LOGCONFIG(TAG, "  Warm White Temperature: %f mireds", this->traits_.get_max_mireds());
   ESP_LOGCONFIG(TAG, "  Constant Brightness: %s", this->constant_brightness_ ? "true" : "false");
-  ESP_LOGCONFIG(TAG, "  Minimum Brightness: 0x%.2X", this->get_min_brightness());
+  ESP_LOGCONFIG(TAG, "  Minimum Brightness: %.0f%%", this->get_min_brightness() * 100);
 }
 
 void BleAdvLight::write_state(light::LightState *state) {
@@ -81,15 +81,15 @@ void BleAdvLight::write_state(light::LightState *state) {
     } else {
       eff_values.as_cwww(&cwf, &wwf, 0, this->constant_brightness_);
     }
-    ESP_LOGD(TAG, "Updating Cold: %.0f%, Warm: %.0f%", cwf*100, wwf*100);
+    ESP_LOGD(TAG, "Updating Cold: %.0f%%, Warm: %.0f%%", cwf*100, wwf*100);
     this->command(CommandType::LIGHT_WCOLOR, (uint8_t) (cwf*255), (uint8_t) (wwf*255));
   } else {
     if (ct_diff != 0) {
-      ESP_LOGD(TAG, "Updating warm color temperature: %.0f%", updated_ctf*100);
+      ESP_LOGD(TAG, "Updating warm color temperature: %.0f%%", updated_ctf*100);
       this->command(CommandType::LIGHT_CCT, (uint8_t) (255*updated_ctf));
     }
     if (br_diff != 0) {
-      ESP_LOGD(TAG, "Updating brightness: %.0f%", updated_brf*100);
+      ESP_LOGD(TAG, "Updating brightness: %.0f%%", updated_brf*100);
       this->command(CommandType::LIGHT_DIM, (uint8_t) (255*updated_brf));
     }
   }
