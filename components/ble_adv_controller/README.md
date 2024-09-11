@@ -32,16 +32,18 @@ The technical solution implemented by manufacturers to control those devices is 
 ## How to try it
 
 1. As a preliminary step, be sure to be able to create a base ESPHome configuration from the ESPHome Dashboard, install it to your ESP32, have it available in Home Assistant and be able to access the logs (needed in case of issue). This is a big step if you are new to ESPHome but on top of [ESPHome doc](https://esphome.io/guides/getting_started_hassio.html) you will find tons of tutorial on the net for that.
-2. Add to your up and running ESPHome configuration the reference to this repo using ([ESPHome external component](https://esphome.io/components/external_components.html))
+2. Add to your up and running ESPHome configuration the reference to this repo using ([ESPHome external component](https://esphome.io/components/external_components.html)).
 3. Add a lamp controller `ble_adv_controller` specifying (see example configuration):
    * its `id` to be referenced by entities it controls. The `id` is also the reference used to pair with the device: if it is changed the device needs to be re-paired with the new `id`.
    * its `encoding`, this is fully known from the phone controlling app, see the possible values in the examples below.
    * its `variant`, this is the version of the encoding. Keep the default value (last version) as a first step, this will probably be the good one if your light is recent.
-4. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform
-5. Add a `pair` configuration button to ease the pairing action from HA
-6. Install and flash the ESP32 device
-7. Find the relevant `variant` and `duration` corresponding to your device thanks to [Dynamic configuration](#dynamic-configuration) or the full setup by [setting without pairing](#setup-without-pairing)
-8. Enjoy controlling your BLE light with Home Assistant!
+4. Add one or several light or fan entities to the configuration with the `ble_adv_controller` platform.
+5. Add a `pair` configuration button to ease the pairing action from HA.
+6. Install and flash the ESP32 device.
+7. Add the ESPhome device to your Home Assistant devices (it should be found automatically as a new device).
+8. Pair your lamp using the "Pair" button in your new ESPhome device or connect it using the [setting without pairing](#setup-without-pairing). Remember that some Lampsmart devices can only be paired for 5 seconds after cutting and reconnecting their power supply.
+9. Find the relevant `variant` and `duration` corresponding to your device thanks to [Dynamic configuration](#dynamic-configuration) or the full setup when using [setting without pairing](#setup-without-pairing).
+10. Enjoy controlling your BLE light with Home Assistant!.
 
 ## Known issues and not implemented or tested features
 
