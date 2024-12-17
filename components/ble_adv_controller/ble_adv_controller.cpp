@@ -75,11 +75,11 @@ void BleAdvController::setup() {
 
 void BleAdvController::dump_config() {
   ESP_LOGCONFIG(TAG, "BleAdvController '%s'", this->get_object_id().c_str());
-  ESP_LOGCONFIG(TAG, "  Hash ID '%X'", this->params_.id_);
+  ESP_LOGCONFIG(TAG, "  Hash ID '%lX'", this->params_.id_);
   ESP_LOGCONFIG(TAG, "  Index '%d'", this->params_.index_);
-  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %d ms", this->get_min_tx_duration());
-  ESP_LOGCONFIG(TAG, "  Transmission Max Duration: %d ms", this->max_tx_duration_);
-  ESP_LOGCONFIG(TAG, "  Transmission Sequencing Duration: %d ms", this->seq_duration_);
+  ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %ld ms", this->get_min_tx_duration());
+  ESP_LOGCONFIG(TAG, "  Transmission Max Duration: %ld ms", this->max_tx_duration_);
+  ESP_LOGCONFIG(TAG, "  Transmission Sequencing Duration: %ld ms", this->seq_duration_);
   ESP_LOGCONFIG(TAG, "  Configuration visible: %s", this->show_config_ ? "YES" : "NO");
 }
 
