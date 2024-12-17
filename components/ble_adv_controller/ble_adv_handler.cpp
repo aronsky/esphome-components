@@ -252,8 +252,11 @@ bool BleAdvHandler::identify_param(const BleAdvParam & param, bool ignore_ble_pa
       encoder->encode(params, cmd, cont);
       BleAdvParam & fparam = params.back();
       ESP_LOGD(TAG, "enc - %s", esphome::format_hex_pretty(fparam.get_full_buf(), fparam.get_full_len()).c_str());
-      bool nodiff = std::equal(param.get_const_data_buf(), param.get_const_data_buf() + param.get_data_len(), fparam.get_data_buf());
-      nodiff ? ESP_LOGI(TAG, "Decoded / Re-encoded with NO DIFF") : ESP_LOGE(TAG, "DIFF after Decode / Re-encode");
+      if (std::equal(param.get_const_data_buf(), param.get_const_data_buf() + param.get_data_len(), fparam.get_data_buf())) {
+        ESP_LOGI(TAG, "Decoded / Re-encoded with NO DIFF");
+      } else {
+        ESP_LOGE(TAG, "DIFF after Decode / Re-encode");
+      }
 
       return true;
     } 
