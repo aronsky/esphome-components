@@ -40,7 +40,7 @@ CONFIG_SCHEMA = cv.All(
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_OUTPUT_ID])
-    await entity_base_code_gen(var, config)
+    await entity_base_code_gen(var, config, "fan")
     await fan.register_fan(var, config)
     cg.add(var.set_speed_count(config[CONF_BLE_ADV_SPEED_COUNT]))
     cg.add(var.set_direction_supported(config[CONF_BLE_ADV_DIRECTION_SUPPORTED]))

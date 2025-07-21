@@ -1,7 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import light, output
-from esphome.cpp_helpers import setup_entity
 from esphome.const import (
     CONF_CONSTANT_BRIGHTNESS,
     CONF_COLD_WHITE_COLOR_TEMPERATURE,
@@ -58,7 +57,7 @@ CONFIG_SCHEMA = cv.All(
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_OUTPUT_ID])
-    await entity_base_code_gen(var, config)
+    await entity_base_code_gen(var, config, "light")
     await light.register_light(var, config)
     if CONF_BLE_ADV_SECONDARY in config:
         cg.add(var.set_traits())

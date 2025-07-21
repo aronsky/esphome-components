@@ -55,7 +55,7 @@ async def to_code(config):
 
     # perform code gen
     var = await button.new_button(config)
-    await entity_base_code_gen(var, config)
+    await entity_base_code_gen(var, config, "button")
     cg.add(var.set_cmd(params[CONF_BLE_ADV_CMD]))
     if nb_args > 0:
         cg.add(var.set_args(config[CONF_BLE_ADV_ARGS]))
