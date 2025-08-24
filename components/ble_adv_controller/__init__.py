@@ -21,7 +21,7 @@ from .const import (
     CONF_BLE_ADV_SHOW_CONFIG,
 )
 
-AUTO_LOAD = ["esp32_ble", "select", "number"]
+AUTO_LOAD = ["esp32_ble", "select", "number", "esp32_ble_tracker"]
 DEPENDENCIES = ["esp32"]
 MULTI_CONF = True
 
