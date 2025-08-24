@@ -10,11 +10,8 @@ float ensure_range(float f) {
   return (f > 1.0) ? 1.0 : ( (f < 0.0) ? 0.0 : f );
 }
 
-void BleAdvLight::set_min_brightness(int min_brightness, int min, int max, int step) { 
-  this->number_min_brightness_.traits.set_min_value(min);
-  this->number_min_brightness_.traits.set_max_value(max);
-  this->number_min_brightness_.traits.set_step(step);
-  this->number_min_brightness_.state = min_brightness; 
+void BleAdvLight::set_min_brightness(int min_brightness) { 
+  this->number_min_brightness_->state = min_brightness; 
 }
 
 void BleAdvLight::set_traits(float cold_white_temperature, float warm_white_temperature) {
@@ -25,7 +22,7 @@ void BleAdvLight::set_traits(float cold_white_temperature, float warm_white_temp
 
 void BleAdvLight::setup() {
   if (this->get_parent()->is_show_config()) {
-    this->number_min_brightness_.init("Min Brightness", this->get_name());
+    this->number_min_brightness_->init();
   }
 }
 

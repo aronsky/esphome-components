@@ -15,7 +15,6 @@ void BleAdvSelect::control(const std::string &value) {
 }
 
 void BleAdvSelect::sub_init() { 
-  App.register_select(this);
   this->rtc_ = global_preferences->make_preference< uint32_t >(this->get_object_id_hash());
   uint32_t restored;
   if (this->rtc_.load(&restored)) {
@@ -34,7 +33,6 @@ void BleAdvNumber::control(float value) {
 }
 
 void BleAdvNumber::sub_init() {
-  App.register_number(this);
   this->rtc_ = global_preferences->make_preference< float >(this->get_object_id_hash());
   float restored;
   if (this->rtc_.load(&restored)) {
@@ -43,21 +41,18 @@ void BleAdvNumber::sub_init() {
 }
 
 void BleAdvController::set_encoding_and_variant(const std::string & encoding, const std::string & variant) {
-  this->select_encoding_.traits.set_options(this->handler_->get_ids(encoding));
+  this->select_encoding_->traits.set_options(this->handler_->get_ids(encoding));
   this->cur_encoder_ = this->handler_->get_encoder(encoding, variant);
-  this->select_encoding_.state = this->cur_encoder_->get_id();
-  this->select_encoding_.add_on_state_callback(std::bind(&BleAdvController::refresh_encoder, this, std::placeholders::_1, std::placeholders::_2));
+  this->select_encoding_->state = this->cur_encoder_->get_id();
+  this->select_encoding_->add_on_state_callback(std::bind(&BleAdvController::refresh_encoder, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void BleAdvController::refresh_encoder(std::string id, size_t index) {
   this->cur_encoder_ = this->handler_->get_encoder(id);
 }
 
-void BleAdvController::set_min_tx_duration(int tx_duration, int min, int max, int step) {
-  this->number_duration_.traits.set_min_value(min);
-  this->number_duration_.traits.set_max_value(max);
-  this->number_duration_.traits.set_step(step);
-  this->number_duration_.state = tx_duration;
+void BleAdvController::set_min_tx_duration(int tx_duration) {
+  this->number_duration_->state = tx_duration;
 }
 
 void BleAdvController::setup() {
@@ -67,9 +62,11 @@ void BleAdvController::setup() {
   register_service(&BleAdvController::on_cmd, "cmd_" + this->get_object_id(), {"cmd", "arg0", "arg1", "arg2", "arg3"});
   register_service(&BleAdvController::on_raw_inject, "inject_raw_" + this->get_object_id(), {"raw"});
 #endif
-  if (this->is_show_config()) {
-    this->select_encoding_.init("Encoding", this->get_name());
-    this->number_duration_.init("Duration", this->get_name());
+  if (select_encoding_ != nullptr) {
+    select_encoding_->init();
+  }
+  if (number_duration_ != nullptr) {
+    number_duration_->init();
   }
 }
 
@@ -157,7 +154,7 @@ void BleAdvController::loop() {
   }
   else {
     // command is being advertised by this controller, check if stop and clean-up needed
-    uint32_t duration = this->commands_.empty() ? this->max_tx_duration_ : this->number_duration_.state;
+    uint32_t duration = this->commands_.empty() ? this->max_tx_duration_ : this->number_duration_->state;
     if (now > this->adv_start_time_ + duration) {
       this->adv_start_time_ = 0;
       this->handler_->remove_from_advertiser(this->adv_id_);
