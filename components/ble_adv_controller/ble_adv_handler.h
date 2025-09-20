@@ -3,7 +3,7 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
-#ifdef USE_API
+#ifdef USE_API_SERVICES
 #include "esphome/components/api/custom_api_device.h"
 #endif
 
@@ -193,7 +193,7 @@ protected:
     with handling of prioritization and parallel send when possible
  */
 class BleAdvHandler: public Component
-#ifdef USE_API
+#ifdef USE_API_SERVICES
   , public api::CustomAPIDevice
 #endif
 {
@@ -220,7 +220,7 @@ public:
   void capture(const esp32_ble_tracker::ESPBTDevice & device, bool ignore_ble_param = true, uint16_t rem_time = 60);
 #endif
 
-#ifdef USE_API
+#ifdef USE_API_SERVICES
   // HA service to decode
   void on_raw_decode(std::string raw);
 #endif

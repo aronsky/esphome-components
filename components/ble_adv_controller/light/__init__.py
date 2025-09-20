@@ -1,6 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import light, output
+from esphome.components.number import new_number, number_schema
 from esphome.const import (
     CONF_CONSTANT_BRIGHTNESS,
     CONF_COLD_WHITE_COLOR_TEMPERATURE,
@@ -9,6 +10,8 @@ from esphome.const import (
     CONF_OUTPUT_ID,
     CONF_DEFAULT_TRANSITION_LENGTH,
     CONF_RESTORE_MODE,
+    CONF_ID,
+    CONF_NAME,
 )
 
 from .. import (
@@ -16,11 +19,14 @@ from .. import (
     ENTITY_BASE_CONFIG_SCHEMA,
     entity_base_code_gen,
     BleAdvEntity,
+    BleAdvNumber,
 )
 
 from ..const import (
     CONF_BLE_ADV_SECONDARY,
     CONF_BLE_ADV_SPLIT_DIM_CCT,
+    CONF_BLE_ADV_MIN_BRIGHTNESS_NUMBER,
+    CONF_BLE_ADV_MIN_BRIGHTNESS_NUMBER_NAME,
 )
 
 BleAdvLight = bleadvcontroller_ns.class_('BleAdvLight', light.LightOutput, BleAdvEntity)
@@ -40,6 +46,11 @@ CONFIG_SCHEMA = cv.All(
                 cv.Optional(CONF_DEFAULT_TRANSITION_LENGTH, default="0s"): cv.positive_time_period_milliseconds,
                 # override default value for restore mode, to always restore as it was if possible
                 cv.Optional(CONF_RESTORE_MODE, default="RESTORE_DEFAULT_OFF"): cv.enum(light.RESTORE_MODES, upper=True, space="_"),
+                cv.Optional(CONF_BLE_ADV_MIN_BRIGHTNESS_NUMBER, default={
+                    CONF_ID: CONF_BLE_ADV_MIN_BRIGHTNESS_NUMBER_NAME,
+                    CONF_NAME: CONF_BLE_ADV_MIN_BRIGHTNESS_NUMBER_NAME,
+
+                }): number_schema(BleAdvNumber)
             }
         ).extend(ENTITY_BASE_CONFIG_SCHEMA),
         light.RGB_LIGHT_SCHEMA.extend(
@@ -62,7 +73,13 @@ async def to_code(config):
     if CONF_BLE_ADV_SECONDARY in config:
         cg.add(var.set_traits())
     else:
+        number_min_brightness = await new_number(config[CONF_BLE_ADV_MIN_BRIGHTNESS_NUMBER],
+                                                 min_value=0,
+                                                 max_value=100,
+                                                 step=1)
+        cg.add(var.set_number_min_brightness(number_min_brightness))
+
         cg.add(var.set_traits(config[CONF_COLD_WHITE_COLOR_TEMPERATURE], config[CONF_WARM_WHITE_COLOR_TEMPERATURE]))
         cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
         cg.add(var.set_split_dim_cct(config[CONF_BLE_ADV_SPLIT_DIM_CCT]))
-        cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS] * 100, 0, 100, 1))
+        cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS] * 100))

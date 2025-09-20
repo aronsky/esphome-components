@@ -4,7 +4,7 @@
 #include "esphome/core/entity_base.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/preferences.h"
-#ifdef USE_API
+#ifdef USE_API_SERVICES
 #include "esphome/components/api/custom_api_device.h"
 #endif
 #include "esphome/components/select/select.h"
@@ -22,12 +22,7 @@ template < class BaseEntity >
 class BleAdvDynConfig: public BaseEntity
 {
 public:
-  void init(const char * name, const StringRef & parent_name) {
-    // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
-    this->ref_name_ = std::string(parent_name) + " - " + std::string(name);
-    this->set_object_id(this->ref_name_.c_str());
-    this->set_name(this->ref_name_.c_str());
-    this->set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+  void init() {
     this->sub_init();
     this->publish_state(this->state);
   }
@@ -36,7 +31,6 @@ public:
   virtual void sub_init() = 0;
 
 protected:
-  std::string ref_name_;
   ESPPreferenceObject rtc_{nullptr};
 };
 
@@ -66,7 +60,7 @@ protected:
     Interacts with the BleAdvHandler for Queue processing
  */
 class BleAdvController : public Component, public EntityBase
-#ifdef USE_API
+#ifdef USE_API_SERVICES
   , public api::CustomAPIDevice
 #endif
 {
@@ -75,8 +69,8 @@ public:
   void loop() override;
   virtual void dump_config() override;
   
-  void set_min_tx_duration(int tx_duration, int min, int max, int step);
-  uint32_t get_min_tx_duration() { return (uint32_t)this->number_duration_.state; }
+  void set_min_tx_duration(int tx_duration);
+  uint32_t get_min_tx_duration() { return (uint32_t)this->number_duration_->state; }
   void set_max_tx_duration(uint32_t tx_duration) { this->max_tx_duration_ = tx_duration; }
   void set_seq_duration(uint32_t seq_duration) { this->seq_duration_ = seq_duration; }
   void set_forced_id(uint32_t forced_id) { this->params_.id_ = forced_id; }
@@ -88,11 +82,14 @@ public:
   bool is_supported(const Command &cmd) { return this->cur_encoder_->is_supported(cmd); }
   void set_show_config(bool show_config) { this->show_config_ = show_config; }
   bool is_show_config() { return this->show_config_; }
+  
+  void set_select_encoding(BleAdvSelect* select) { select_encoding_ = select; };
+  void set_number_duration(BleAdvNumber* number) { number_duration_ = number; };
 
   void set_handler(BleAdvHandler * handler) { this->handler_ = handler; }
   void refresh_encoder(std::string id, size_t index);
 
-#ifdef USE_API
+#ifdef USE_API_SERVICES
   // Services
   void on_pair();
   void on_unpair();
@@ -112,9 +109,9 @@ protected:
   bool reversed_;
 
   bool show_config_{false};
-  BleAdvSelect select_encoding_;
+  BleAdvSelect * select_encoding_{nullptr};
   BleAdvEncoder * cur_encoder_{nullptr};
-  BleAdvNumber number_duration_;
+  BleAdvNumber * number_duration_{nullptr};
   BleAdvHandler * handler_{nullptr};
 
   class QueueItem {

@@ -6,12 +6,14 @@ from esphome.const import (
     CONF_ID,
     CONF_NAME,
     CONF_REVERSED,
-    CONF_TYPE,
     CONF_INDEX,
     CONF_VARIANT,
     PLATFORM_ESP32,
+    ENTITY_CATEGORY_CONFIG,
 )
 from esphome.core.entity_helpers import setup_entity
+from esphome.components.select import new_select, select_schema
+from esphome.components.number import new_number, number_schema
 from .const import (
     CONF_BLE_ADV_CONTROLLER_ID,
     CONF_BLE_ADV_ENCODING,
@@ -19,9 +21,13 @@ from .const import (
     CONF_BLE_ADV_MAX_DURATION,
     CONF_BLE_ADV_SEQ_DURATION,
     CONF_BLE_ADV_SHOW_CONFIG,
+    CONF_BLE_ADV_DURATION_NUMBER,
+    CONF_BLE_ADV_DURATION_NUMBER_NAME,
+    CONF_BLE_ADV_ENCODING_SELECT,
+    CONF_BLE_ADV_ENCODING_SELECT_NAME,
 )
 
-AUTO_LOAD = ["esp32_ble", "select", "number"]
+AUTO_LOAD = ["esp32_ble", "select", "number", "esp32_ble_tracker"]
 DEPENDENCIES = ["esp32"]
 MULTI_CONF = True
 
@@ -31,6 +37,8 @@ BleAdvEncoder = bleadvcontroller_ns.class_('BleAdvEncoder')
 BleAdvMultiEncoder = bleadvcontroller_ns.class_('BleAdvMultiEncoder', BleAdvEncoder)
 BleAdvHandler = bleadvcontroller_ns.class_('BleAdvHandler', cg.Component)
 BleAdvEntity = bleadvcontroller_ns.class_('BleAdvEntity', cg.Component)
+BleAdvSelect = bleadvcontroller_ns.class_('BleAdvSelect', cg.EntityBase)
+BleAdvNumber = bleadvcontroller_ns.class_('BleAdvNumber', cg.EntityBase)
 
 FanLampEncoderV1 = bleadvcontroller_ns.class_('FanLampEncoderV1')
 FanLampEncoderV2 = bleadvcontroller_ns.class_('FanLampEncoderV2')
@@ -208,8 +216,23 @@ CONTROLLER_BASE_CONFIG = cv.ENTITY_BASE_SCHEMA.extend(
         cv.Optional(CONF_REVERSED, default=False): cv.boolean,
         cv.Optional(CONF_BLE_ADV_SHOW_CONFIG, default=True): cv.boolean,
         cv.Optional(CONF_INDEX, default=0): cv.All(cv.positive_int, cv.Range(min=0, max=255)),
+        cv.Optional(
+            CONF_BLE_ADV_DURATION_NUMBER,
+            default={
+                CONF_ID: CONF_BLE_ADV_DURATION_NUMBER_NAME,
+                CONF_NAME: CONF_BLE_ADV_DURATION_NUMBER_NAME,
+            },
+        ): number_schema(BleAdvNumber, icon="mdi:timer", entity_category=ENTITY_CATEGORY_CONFIG),
+        cv.Optional(
+            CONF_BLE_ADV_ENCODING_SELECT,
+            default={
+                CONF_ID: CONF_BLE_ADV_ENCODING_SELECT_NAME,
+                CONF_NAME: CONF_BLE_ADV_ENCODING_SELECT_NAME,
+            },
+        ): select_schema(BleAdvSelect, icon="mdi:code-array", entity_category=ENTITY_CATEGORY_CONFIG),
     }
 )
+
 
 def validate_legacy_variant(config):
     encoding = config[CONF_BLE_ADV_ENCODING]
@@ -219,30 +242,56 @@ def validate_legacy_variant(config):
         raise cv.Invalid("DEPRECATED '%s - %s', %s" % (encoding, variant, pv["msg"]))
     return config
 
-def validate_forced_id(config):
+
+def validate_or_apply_default_forced_id(config):
     encoding = config[CONF_BLE_ADV_ENCODING]
     variant = config[CONF_VARIANT]
-    forced_id = config[CONF_BLE_ADV_FORCED_ID]
     params = BLE_ADV_ENCODERS[ encoding ]
-    max_forced_id = params["variants"][ variant ].get("max_forced_id", 0xFFFFFFFF)
-    if forced_id > max_forced_id :
-        raise cv.Invalid("Invalid 'forced_id' for %s - %s: %s. Maximum: 0x%X." % (encoding, variant, forced_id, max_forced_id))
+
+    if CONF_BLE_ADV_FORCED_ID in config:
+        forced_id = config[CONF_BLE_ADV_FORCED_ID]
+        max_forced_id = params["variants"][ variant ].get("max_forced_id", 0xFFFFFFFF)
+        if forced_id > max_forced_id :
+            raise cv.Invalid("Invalid 'forced_id' for %s - %s: %s. Maximum: 0x%X." % (encoding, variant, forced_id, max_forced_id))
+
+    else:
+        config[CONF_BLE_ADV_FORCED_ID] = params["default_forced_id"]
+
     return config
 
+
+def validate_or_apply_default_variant(config):
+    encoding = config[CONF_BLE_ADV_ENCODING]
+    params = BLE_ADV_ENCODERS[encoding]
+
+    if CONF_VARIANT in config:
+        variant = config[CONF_VARIANT]
+        if variant not in params["variants"]:
+            raise cv.Invalid("Invalid 'variant' for %s: %s." % (encoding, variant))
+
+    else:
+        config[CONF_VARIANT] = params["default_variant"]
+
+    return config
+
+
+ALL_ENCODINGS = [encoding for encoding in BLE_ADV_ENCODERS]
+ALL_VARIANTS = {variant for encoder in BLE_ADV_ENCODERS.values() for variant in encoder["variants"]}
+
 CONFIG_SCHEMA = cv.All(
-    cv.Any(
-        *[ CONTROLLER_BASE_CONFIG.extend(
-            {
-                cv.Required(CONF_BLE_ADV_ENCODING): cv.one_of(encoding),
-                cv.Optional(CONF_VARIANT, default=params["default_variant"]): cv.one_of(*params["variants"].keys()),
-                cv.Optional(CONF_BLE_ADV_FORCED_ID, default=params["default_forced_id"]): cv.hex_uint32_t,
-            }
-        ) for encoding, params in BLE_ADV_ENCODERS.items() ]
+    CONTROLLER_BASE_CONFIG.extend(
+        {
+            cv.Required(CONF_BLE_ADV_ENCODING): cv.one_of(*ALL_ENCODINGS),
+            cv.Optional(CONF_VARIANT): cv.one_of(*ALL_VARIANTS),
+            cv.Optional(CONF_BLE_ADV_FORCED_ID): cv.hex_uint32_t,
+        }
     ),
-    validate_forced_id,
+    validate_or_apply_default_variant,
+    validate_or_apply_default_forced_id,
     validate_legacy_variant,
     cv.only_on([PLATFORM_ESP32]),
 )
+
 
 async def entity_base_code_gen(var, config, platform):
     await cg.register_parented(var, config[CONF_BLE_ADV_CONTROLLER_ID])
@@ -275,8 +324,15 @@ async def to_code(config):
     await cg.register_component(var, config)
     await setup_entity(var, config, "ble_adv_controller")
     cg.add(var.set_handler(hdl))
+
+    select_encoding = await new_select(config[CONF_BLE_ADV_ENCODING_SELECT], options=[str(x) for x in BLE_ADV_ENCODERS.keys()])
+    cg.add(var.set_select_encoding(select_encoding))
+
+    number_duration = await new_number(config[CONF_BLE_ADV_DURATION_NUMBER], min_value=100, max_value=500, step=10)
+    cg.add(var.set_number_duration(number_duration))
+
     cg.add(var.set_encoding_and_variant(config[CONF_BLE_ADV_ENCODING], config[CONF_VARIANT]))
-    cg.add(var.set_min_tx_duration(config[CONF_DURATION], 100, 500, 10))
+    cg.add(var.set_min_tx_duration(config[CONF_DURATION]))
     cg.add(var.set_max_tx_duration(config[CONF_BLE_ADV_MAX_DURATION]))
     cg.add(var.set_seq_duration(config[CONF_BLE_ADV_SEQ_DURATION]))
     cg.add(var.set_reversed(config[CONF_REVERSED]))
@@ -286,4 +342,5 @@ async def to_code(config):
         cg.add(var.set_forced_id(config[CONF_ID].id))
     cg.add(var.set_show_config(config[CONF_BLE_ADV_SHOW_CONFIG]))
 
-
+    cg.add_define("USE_ESP32_BLE_DEVICE")
+    cg.add_define("USE_ESP32_BLE_UUID")

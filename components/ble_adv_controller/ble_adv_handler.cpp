@@ -151,7 +151,7 @@ bool BleAdvMultiEncoder::is_supported(const Command &cmd) {
 }
 
 void BleAdvHandler::setup() {
-#ifdef USE_API
+#ifdef USE_API_SERVICES
   register_service(&BleAdvHandler::on_raw_decode, "raw_decode", {"raw"});
 #endif
 }
@@ -264,7 +264,7 @@ bool BleAdvHandler::identify_param(const BleAdvParam & param, bool ignore_ble_pa
   return false;
 }
 
-#ifdef USE_API
+#ifdef USE_API_SERVICES
 void BleAdvHandler::on_raw_decode(std::string raw) {
   BleAdvParam param;
   param.from_hex_string(raw);
