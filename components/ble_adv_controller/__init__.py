@@ -233,6 +233,7 @@ CONTROLLER_BASE_CONFIG = cv.ENTITY_BASE_SCHEMA.extend(
     }
 )
 
+
 def validate_legacy_variant(config):
     encoding = config[CONF_BLE_ADV_ENCODING]
     variant = config[CONF_VARIANT]
@@ -241,44 +242,56 @@ def validate_legacy_variant(config):
         raise cv.Invalid("DEPRECATED '%s - %s', %s" % (encoding, variant, pv["msg"]))
     return config
 
-def validate_forced_id(config):
+
+def validate_or_apply_default_forced_id(config):
     encoding = config[CONF_BLE_ADV_ENCODING]
     variant = config[CONF_VARIANT]
-    forced_id = config[CONF_BLE_ADV_FORCED_ID]
     params = BLE_ADV_ENCODERS[ encoding ]
-    max_forced_id = params["variants"][ variant ].get("max_forced_id", 0xFFFFFFFF)
-    if forced_id > max_forced_id :
-        raise cv.Invalid("Invalid 'forced_id' for %s - %s: %s. Maximum: 0x%X." % (encoding, variant, forced_id, max_forced_id))
+
+    if CONF_BLE_ADV_FORCED_ID in config:
+        forced_id = config[CONF_BLE_ADV_FORCED_ID]
+        max_forced_id = params["variants"][ variant ].get("max_forced_id", 0xFFFFFFFF)
+        if forced_id > max_forced_id :
+            raise cv.Invalid("Invalid 'forced_id' for %s - %s: %s. Maximum: 0x%X." % (encoding, variant, forced_id, max_forced_id))
+
+    else:
+        config[CONF_BLE_ADV_FORCED_ID] = params["default_forced_id"]
+
     return config
 
-# TODO: temporary simplification
+
+def validate_or_apply_default_variant(config):
+    encoding = config[CONF_BLE_ADV_ENCODING]
+    params = BLE_ADV_ENCODERS[encoding]
+
+    if CONF_VARIANT in config:
+        variant = config[CONF_VARIANT]
+        if variant not in params["variants"]:
+            raise cv.Invalid("Invalid 'variant' for %s: %s." % (encoding, variant))
+
+    else:
+        config[CONF_VARIANT] = params["default_variant"]
+
+    return config
+
+
+ALL_ENCODINGS = [encoding for encoding in BLE_ADV_ENCODERS]
+ALL_VARIANTS = {variant for encoder in BLE_ADV_ENCODERS.values() for variant in encoder["variants"]}
+
 CONFIG_SCHEMA = cv.All(
     CONTROLLER_BASE_CONFIG.extend(
         {
-            cv.Required(CONF_BLE_ADV_ENCODING): cv.string,
-            cv.Optional(CONF_VARIANT, default="v1"): cv.string,
-            cv.Optional(CONF_BLE_ADV_FORCED_ID, default=0): cv.hex_uint32_t,
+            cv.Required(CONF_BLE_ADV_ENCODING): cv.one_of(*ALL_ENCODINGS),
+            cv.Optional(CONF_VARIANT): cv.one_of(*ALL_VARIANTS),
+            cv.Optional(CONF_BLE_ADV_FORCED_ID): cv.hex_uint32_t,
         }
     ),
-    validate_forced_id,
+    validate_or_apply_default_variant,
+    validate_or_apply_default_forced_id,
     validate_legacy_variant,
     cv.only_on([PLATFORM_ESP32]),
 )
 
-# CONFIG_SCHEMA = cv.All(
-#     cv.Any(
-#         *[ CONTROLLER_BASE_CONFIG.extend(
-#             {
-#                 cv.Required(CONF_BLE_ADV_ENCODING): cv.one_of(encoding),
-#                 cv.Optional(CONF_VARIANT, default=params["default_variant"]): cv.one_of(*params["variants"].keys()),
-#                 cv.Optional(CONF_BLE_ADV_FORCED_ID, default=params["default_forced_id"]): cv.hex_uint32_t,
-#             }
-#         ) for encoding, params in BLE_ADV_ENCODERS.items() ]
-#     ),
-#     validate_forced_id,
-#     validate_legacy_variant,
-#     cv.only_on([PLATFORM_ESP32]),
-# )
 
 async def entity_base_code_gen(var, config, platform):
     await cg.register_parented(var, config[CONF_BLE_ADV_CONTROLLER_ID])
