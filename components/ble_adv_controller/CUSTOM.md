@@ -108,6 +108,12 @@ The config loggued gives you what iall the info you would need to setup a copy o
 
 STILL if you listen to your phone app, you will end up with more or less 6 configs (and 3 removing the dupe, one for each variant), so you will have to find the relevant one as the controlled device probably listen to only ONE of those variants...
 
+NOTE: since ESPHome 2025.8 the services below (Raw injection, Raw decoding, Custom Command), as well as the per controller `<device_name>_pair_<ble_adv_controller_id>` and `<device_name>_unpair_<ble_adv_controller_id>` services, are only available with `custom_services: true` in the `api:` section:
+```yaml
+api:
+  custom_services: true
+```
+
 # Raw injection service
 If you captured a raw advertising message emitted by a phone app or a remote, just define a dummy controller and you can re inject the message as such with the following HA service:
 ```

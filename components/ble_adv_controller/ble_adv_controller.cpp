@@ -21,10 +21,18 @@ void BleAdvSelect::sub_init() {
   if (this->rtc_.load(&restored)) {
     for (auto & opt: this->traits.get_options()) {
       if(fnv1_hash(opt) == restored) {
-        this->state = opt;
-        return;
+        this->set_initial_option(opt);
+        break;
       }
     }
+  }
+  this->publish_state(this->active_index_);
+}
+
+void BleAdvSelect::set_initial_option(const std::string & option) {
+  auto index = this->index_of(option);
+  if (index.has_value()) {
+    this->active_index_ = index.value();
   }
 }
 
@@ -40,17 +48,18 @@ void BleAdvNumber::sub_init() {
   if (this->rtc_.load(&restored)) {
     this->state = restored;
   }
+  this->publish_state(this->state);
 }
 
 void BleAdvController::set_encoding_and_variant(const std::string & encoding, const std::string & variant) {
   this->select_encoding_.traits.set_options(this->handler_->get_ids(encoding));
   this->cur_encoder_ = this->handler_->get_encoder(encoding, variant);
-  this->select_encoding_.state = this->cur_encoder_->get_id();
-  this->select_encoding_.add_on_state_callback(std::bind(&BleAdvController::refresh_encoder, this, std::placeholders::_1, std::placeholders::_2));
+  this->select_encoding_.set_initial_option(this->cur_encoder_->get_id());
+  this->select_encoding_.add_on_state_callback([this](size_t index) { this->refresh_encoder(index); });
 }
 
-void BleAdvController::refresh_encoder(std::string id, size_t index) {
-  this->cur_encoder_ = this->handler_->get_encoder(id);
+void BleAdvController::refresh_encoder(size_t index) {
+  this->cur_encoder_ = this->handler_->get_encoder(this->select_encoding_.option_at(index));
 }
 
 void BleAdvController::set_min_tx_duration(int tx_duration, int min, int max, int step) {
@@ -61,11 +70,13 @@ void BleAdvController::set_min_tx_duration(int tx_duration, int min, int max, in
 }
 
 void BleAdvController::setup() {
-#ifdef USE_API
-  register_service(&BleAdvController::on_pair, "pair_" + this->get_object_id());
-  register_service(&BleAdvController::on_unpair, "unpair_" + this->get_object_id());
-  register_service(&BleAdvController::on_cmd, "cmd_" + this->get_object_id(), {"cmd", "arg0", "arg1", "arg2", "arg3"});
-  register_service(&BleAdvController::on_raw_inject, "inject_raw_" + this->get_object_id(), {"raw"});
+#ifdef USE_API_CUSTOM_SERVICES
+  char object_id_buf[OBJECT_ID_MAX_LEN];
+  std::string object_id(this->get_object_id_to(object_id_buf).c_str());
+  register_service(&BleAdvController::on_pair, "pair_" + object_id);
+  register_service(&BleAdvController::on_unpair, "unpair_" + object_id);
+  register_service(&BleAdvController::on_cmd, "cmd_" + object_id, {"cmd", "arg0", "arg1", "arg2", "arg3"});
+  register_service(&BleAdvController::on_raw_inject, "inject_raw_" + object_id, {"raw"});
 #endif
   if (this->is_show_config()) {
     this->select_encoding_.init("Encoding", this->get_name());
@@ -74,7 +85,7 @@ void BleAdvController::setup() {
 }
 
 void BleAdvController::dump_config() {
-  ESP_LOGCONFIG(TAG, "BleAdvController '%s'", this->get_object_id().c_str());
+  ESP_LOGCONFIG(TAG, "BleAdvController '%s'", this->get_name().c_str());
   ESP_LOGCONFIG(TAG, "  Hash ID '%lX'", this->params_.id_);
   ESP_LOGCONFIG(TAG, "  Index '%d'", this->params_.index_);
   ESP_LOGCONFIG(TAG, "  Transmission Min Duration: %ld ms", this->get_min_tx_duration());
@@ -83,7 +94,7 @@ void BleAdvController::dump_config() {
   ESP_LOGCONFIG(TAG, "  Configuration visible: %s", this->show_config_ ? "YES" : "NO");
 }
 
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
 void BleAdvController::on_pair() { 
   Command cmd(CommandType::PAIR);
   this->enqueue(cmd);

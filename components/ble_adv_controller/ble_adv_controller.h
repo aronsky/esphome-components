@@ -4,7 +4,7 @@
 #include "esphome/core/entity_base.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/preferences.h"
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
 #include "esphome/components/api/custom_api_device.h"
 #endif
 #include "esphome/components/select/select.h"
@@ -25,14 +25,13 @@ public:
   void init(const char * name, const StringRef & parent_name) {
     // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
     this->ref_name_ = std::string(parent_name) + " - " + std::string(name);
-    this->set_object_id(this->ref_name_.c_str());
-    this->set_name(this->ref_name_.c_str());
-    this->set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+    // object id hash 0: derived from the name by ESPHome
+    this->configure_entity_(this->ref_name_.c_str(), 0,
+        static_cast<uint32_t>(EntityCategory::ENTITY_CATEGORY_CONFIG) << ENTITY_FIELD_ENTITY_CATEGORY_SHIFT);
     this->sub_init();
-    this->publish_state(this->state);
   }
 
-  // register to App and restore from config / saved data
+  // register to App, restore from config / saved data and publish
   virtual void sub_init() = 0;
 
 protected:
@@ -44,6 +43,10 @@ protected:
   BleAdvSelect: basic implementation of 'Select' to handle configuration choice from HA directly
  */
 class BleAdvSelect: public BleAdvDynConfig < select::Select > {
+public:
+  // select the option before registration, without publishing it
+  void set_initial_option(const std::string & option);
+
 protected:
   void control(const std::string &value) override;
   void sub_init() override;
@@ -66,7 +69,7 @@ protected:
     Interacts with the BleAdvHandler for Queue processing
  */
 class BleAdvController : public Component, public EntityBase
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
   , public api::CustomAPIDevice
 #endif
 {
@@ -90,9 +93,9 @@ public:
   bool is_show_config() { return this->show_config_; }
 
   void set_handler(BleAdvHandler * handler) { this->handler_ = handler; }
-  void refresh_encoder(std::string id, size_t index);
+  void refresh_encoder(size_t index);
 
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
   // Services
   void on_pair();
   void on_unpair();

@@ -2,10 +2,6 @@
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 
-#ifdef USE_ESP32_BLE_CLIENT
-#include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
-#endif
-
 namespace esphome {
 namespace bleadvcontroller {
 
@@ -151,7 +147,7 @@ bool BleAdvMultiEncoder::is_supported(const Command &cmd) {
 }
 
 void BleAdvHandler::setup() {
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
   register_service(&BleAdvHandler::on_raw_decode, "raw_decode", {"raw"});
 #endif
 }
@@ -190,11 +186,18 @@ BleAdvEncoder * BleAdvHandler::get_encoder(const std::string & encoding, const s
   return nullptr;
 }
 
-std::vector<std::string> BleAdvHandler::get_ids(const std::string & encoding) {
-  std::vector<std::string> ids;
+FixedVector<const char *> BleAdvHandler::get_ids(const std::string & encoding) {
+  size_t count = 0;
   for(auto & encoder : this->encoders_) {
     if (encoder->is_encoding(encoding)) {
-      ids.push_back(encoder->get_id());
+      count++;
+    }
+  }
+  FixedVector<const char *> ids;
+  ids.init(count);
+  for(auto & encoder : this->encoders_) {
+    if (encoder->is_encoding(encoding)) {
+      ids.push_back(encoder->get_id().c_str());
     }
   }
   return ids;
@@ -264,7 +267,7 @@ bool BleAdvHandler::identify_param(const BleAdvParam & param, bool ignore_ble_pa
   return false;
 }
 
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
 void BleAdvHandler::on_raw_decode(std::string raw) {
   BleAdvParam param;
   param.from_hex_string(raw);
@@ -274,24 +277,14 @@ void BleAdvHandler::on_raw_decode(std::string raw) {
 #endif
 
 #ifdef USE_ESP32_BLE_CLIENT
-/* Basic class inheriting esp32_ble_tracker::ESPBTDevice in order to access 
-    protected attribute 'scan_result_' containing raw advertisement
-*/
-class HackESPBTDevice: public esp32_ble_tracker::ESPBTDevice {
-public:
-  void get_raw_packet(BleAdvParam & param) const {
-    param.from_raw(this->scan_result_->ble_adv, this->scan_result_->adv_data_len);
-  }
-};
-
 void BleAdvHandler::capture(const esp32_ble_tracker::ESPBTDevice & device, bool ignore_ble_param, uint16_t rem_time) {
   // Clean-up expired packets
   this->listen_packets_.remove_if( [&](BleAdvParam & p){ return p.duration_ < millis(); } );
 
   // Read raw advertised packets
   BleAdvParam param;
-  const HackESPBTDevice * hack_device = reinterpret_cast< const HackESPBTDevice * >(&device);
-  hack_device->get_raw_packet(param);
+  const esp32_ble::BLEScanResult & scan_result = device.get_scan_result();
+  param.from_raw(scan_result.ble_adv, scan_result.adv_data_len);
   if (!param.has_data()) return;
 
   // Check if not already received in the last 300s

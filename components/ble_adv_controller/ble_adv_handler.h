@@ -3,8 +3,13 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
 #include "esphome/components/api/custom_api_device.h"
+#endif
+
+#ifdef USE_ESP32_BLE_CLIENT
+// ESPBTDevice is now an alias of ble_device_base::ESPBTDevice: it cannot be forward declared
+#include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #endif
 
 #include <esp_gap_ble_api.h>
@@ -12,12 +17,6 @@
 #include <list>
 
 namespace esphome {
-
-#ifdef USE_ESP32_BLE_CLIENT
-namespace esp32_ble_tracker {
-  class ESPBTDevice;
-}
-#endif
 
 namespace bleadvcontroller {
 
@@ -193,7 +192,7 @@ protected:
     with handling of prioritization and parallel send when possible
  */
 class BleAdvHandler: public Component
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
   , public api::CustomAPIDevice
 #endif
 {
@@ -206,7 +205,8 @@ public:
   void add_encoder(BleAdvEncoder * encoder);
   BleAdvEncoder * get_encoder(const std::string & id);
   BleAdvEncoder * get_encoder(const std::string & encoding, const std::string & variant);
-  std::vector<std::string> get_ids(const std::string & encoding);
+  // pointers to the encoders' ids, valid for the program lifetime (SelectTraits keeps them)
+  FixedVector<const char *> get_ids(const std::string & encoding);
 
   // Advertiser
   uint16_t add_to_advertiser(std::vector< BleAdvParam > & params);
@@ -220,7 +220,7 @@ public:
   void capture(const esp32_ble_tracker::ESPBTDevice & device, bool ignore_ble_param = true, uint16_t rem_time = 60);
 #endif
 
-#ifdef USE_API
+#ifdef USE_API_CUSTOM_SERVICES
   // HA service to decode
   void on_raw_decode(std::string raw);
 #endif

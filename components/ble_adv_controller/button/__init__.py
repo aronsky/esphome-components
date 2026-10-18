@@ -3,6 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import button
 
 from esphome.const import (
+    CONF_ID,
     CONF_OUTPUT_ID,
     ENTITY_CATEGORY_CONFIG,
     DEVICE_CLASS_IDENTIFY,
@@ -54,8 +55,11 @@ async def to_code(config):
         raise cv.Invalid("Invalid number of arguments for '%s': %d, should be %d" % (cmd, nb_args, nb_args_cmd))
 
     # perform code gen
-    var = await button.new_button(config)
+    # entity setup before button registration: the other order registers the button twice on
+    # ESPHome 2026.9 (queued registration is emitted again by the second setup_entity)
+    var = cg.new_Pvariable(config[CONF_ID])
     await entity_base_code_gen(var, config, "button")
+    await button.register_button(var, config)
     cg.add(var.set_cmd(params[CONF_BLE_ADV_CMD]))
     if nb_args > 0:
         cg.add(var.set_args(config[CONF_BLE_ADV_ARGS]))

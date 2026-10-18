@@ -1,5 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
+from esphome.core import CORE
 from esphome.components import light, output
 from esphome.const import (
     CONF_CONSTANT_BRIGHTNESS,
@@ -66,3 +67,6 @@ async def to_code(config):
         cg.add(var.set_constant_brightness(config[CONF_CONSTANT_BRIGHTNESS]))
         cg.add(var.set_split_dim_cct(config[CONF_BLE_ADV_SPLIT_DIM_CCT]))
         cg.add(var.set_min_brightness(config[CONF_MIN_BRIGHTNESS] * 100, 0, 100, 1))
+        # 'Min Brightness' number is created in C++ (only if the controller shows its config,
+        # unknown here: counting it anyway only reserves one unused slot)
+        CORE.register_platform_component("number", var)

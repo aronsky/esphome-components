@@ -12,6 +12,7 @@ The goal of this component is to build a hardware proxy [ESPHome based](https://
 
 This component is an [ESPHome external component](https://esphome.io/components/external_components.html). In order to use it you will need to have:
 * A basic knowledge of [ESPHome](https://esphome.io/). A good entry point is [here](https://esphome.io/guides/getting_started_hassio.html).
+* ESPHome 2026.9 or newer. When upgrading from an older ESPHome, the values of the Encoding, Duration and Min Brightness config entities are reset once to the ones from the yaml, and Home Assistant may create new entity ids for them.
 * The [ESPHome integration](https://www.home-assistant.io/integrations/esphome/) in Home Assistant
 * An [Espressif](https://www.espressif.com/) microcontroller supporting Bluetooth v4, such as any [ESP32](https://www.espressif.com/en/products/socs/esp32) based model. You can find some for a few dollars on any online marketplace searching for ESP32.
 
